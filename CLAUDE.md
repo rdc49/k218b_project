@@ -51,6 +51,12 @@ step — that is this project.
   the K2-18 b-specific results rather than treat the current content as final.
 - `reference_papers/` — supporting PDFs, e.g. `calder_2026.pdf` (the
   predecessor paper above).
+- `k218b_fiducial.toml` — the fiducial PROTEUS configuration for this
+  project: every non-default parameter is set explicitly with an inline
+  comment justifying the choice. This is the base config that the grid sweep
+  is built from — each grid point's config should equal this file with only
+  the swept fO2/H/C/N/S keys overridden. See "Fiducial configuration" below
+  for the specifics it pins down.
 - `proteus_CLAUDE.md` — full agent-guidelines file for *developing* the
   PROTEUS codebase itself (installation, testing rigor, coverage gates, PR
   process, etc.). It is not this project's own instructions; it's carried
@@ -63,15 +69,17 @@ step — that is this project.
 
 ## PROTEUS essentials for this project
 
-PROTEUS is a coupled atmosphere-interior evolution framework: it couples an
-interior thermal evolution model (`SPIDER` or `ARAGOG`) with a 1D
-radiative-convective climate model (`AGNI`, backed by `SOCRATES`), with
-volatile partitioning between magma and atmosphere handled by `CALLIOPE`
-(equilibrium gas chemistry + solubility laws), and stellar evolution by
-`MORS`. A run starts fully molten and integrates forward until either the
-mantle solidifies or the planet reaches global energetic steady state
-(instellation = internal heat + thermal emission) — the latter is the
-"permanent magma ocean" outcome this project is testing for K2-18 b.
+PROTEUS is a coupled atmosphere-interior evolution framework built from
+swappable modules per physics domain (interior structure, interior
+energetics, outgassing, climate, escape, observation, atmospheric
+chemistry). `SPIDER`/`ARAGOG` + `CALLIOPE` is the generic/default module
+combination described in `proteus_CLAUDE.md`, but **this project uses a
+different combination** — see "Fiducial configuration" below for the exact
+modules `k218b_fiducial.toml` selects. A run starts fully molten and
+integrates forward until either the mantle solidifies or the planet reaches
+global energetic steady state (instellation = internal heat + thermal
+emission) — the latter is the "permanent magma ocean" outcome this project
+is testing for K2-18 b.
 
 Relevant CLI entry points (see `proteus_CLAUDE.md` for full detail):
 
@@ -91,6 +99,44 @@ project, so pick the mode deliberately and keep it consistent across the grid
 so that fO2 comparisons are apples-to-apples. The H/C/N/S volatile budgets for
 the sweep are set the same way (`ppmw`/`kg` per element).
 
+### Fiducial configuration: `k218b_fiducial.toml`
+
+This is the authoritative base config for the project (project root). Every
+grid-sweep config should derive from it, overriding only the swept
+parameters. Key points:
+
+- **Module selection** (differs from the generic PROTEUS description above —
+  treat this file, not `proteus_CLAUDE.md`, as the source of truth for which
+  modules this project actually uses):
+  - `interior_struct.module = "zalmoxis"`
+  - `interior_energetics.module = "boundary"` (a parametrised boundary-layer
+    model, not `SPIDER`/`ARAGOG`)
+  - `outgas.module = "atmodeller"` (not `CALLIOPE` — chosen to account for
+    non-ideal fugacity effects). Note some exploratory sweep folders in
+    PROTEUS `output/` use a `calliope`-suffixed variant instead; check which
+    outgassing backend a given sweep used before comparing it against others.
+  - `atmos_clim.module = "agni"` (backed by `SOCRATES`, `spectral_group =
+    "Dayspring"`, 48 bands)
+  - `escape.module = "zephyrus"`
+  - `observe.module = "petitRADTRANS"` — this is what generates each run's
+    synthetic transmission spectrum.
+  - `atmos_chem.module = "vulcan"`, run `when = "offline"` — still part of
+    the automated PROTEUS pipeline (see above), just executed as an offline
+    post-step rather than inline each timestep.
+  - `star.module = "mors"` (stellar evolution included, not blackbody).
+- **Fixed K2-18 b system parameters**: `planet.mass_tot = 8.63 M_Earth`
+  (Benneke 2019), `star.mass = 0.495 M_sun` (Cloutier 2019), `star.mors.Teff
+  = 3645 K` / `rot_period = 39.3 d` / `age_now = 3.0 Gyr` (Sairam 2025),
+  `orbit.semimajoraxis = 0.15910 au` (Benneke 2019). Host spectrum is
+  MUSCLES GJ 849 used as an M-dwarf substitute for K2-18.
+- **Grid axes live under these keys** — the fO2/H/C/N/S sweep should override:
+  - `outgas.fO2_shift_IW` (fiducial: `-3`)
+  - `planet.elements.H_budget` with `H_mode = "ppmw"` (fiducial: `10000`
+    ppmw, ~1% EMF)
+  - `planet.elements.C_budget` (fiducial: `0.32`, ~100x solar metallicity)
+  - `planet.elements.N_budget` (fiducial: `0.09`, ~100x solar metallicity)
+  - `planet.elements.S_budget` (fiducial: `0.04`, ~100x solar metallicity)
+
 Long grid runs should be launched detached, e.g.:
 
 ```bash
@@ -107,11 +153,53 @@ type records with periodic interior snapshots (`<iter>_int.nc`) under `data/`.
 Atmospheric chemistry and the synthetic spectrum for each run are produced
 automatically by the PROTEUS pipeline (no separate `observe`/`offchem` call
 needed) and are written into that same per-run output subdirectory alongside
-the physical output. When a checked sweep folder is moved into
-`simulation_data/`, keep enough of that per-run structure intact (or flatten
-it consistently via a documented convention) that `plotting_scripts/` can
-find run metadata (grid parameter values), the physical output, and the
-synthetic spectrum together for each point.
+the physical output.
+
+### Moving a completed sweep into `simulation_data/`
+
+The live PROTEUS install on this machine is `/data/rdc49-2/PROTEUS/`, and grid
+sweeps run there land in `/data/rdc49-2/PROTEUS/output/<sweep_name>/`. A
+sweep directory contains one subdirectory per grid point, `case_000000/`,
+`case_000001/`, etc., each with:
+
+- `status` — one-line run state, e.g. `Running`, `Completed (solidified)`,
+  `Completed (net flux is small)`, or `Error (...)`. **Check this in every
+  case before moving the sweep** — a folder isn't ready to move while any
+  case still says `Running` (still in progress) or has no `status` file at
+  all (never started/crashed early). `Error (...)` cases are not failures of
+  the move itself, but note them so the analysis in `plotting_scripts/`
+  knows which grid points to exclude/flag.
+- `init_coupler.toml` — the resolved config for that case, including its
+  grid-point parameter values (e.g. `fO2_shift_IW`) — this is how
+  `plotting_scripts/` should recover each case's position in the fO2 x H x C
+  x N x S grid.
+- `runtime_helpfile.csv`, `proteus_00.log`, `agni_recent.log` — run history
+  and logs.
+- `data/` — interior/atmosphere snapshots.
+- `observe/`, `offchem/` — the atmospheric chemistry and synthetic spectrum
+  output generated automatically by the pipeline (see above).
+- `plots/` — PROTEUS's own built-in diagnostic plots for that case.
+
+To check status across a whole sweep before moving it:
+
+```bash
+for f in /data/rdc49-2/PROTEUS/output/<sweep_name>/*/status; do cat "$f"; echo; done | sort | uniq -c
+```
+
+Once every case reports a terminal state you're satisfied with (no
+unexpected `Running` or missing-status cases), move the whole sweep folder
+into `simulation_data/` in one go — `PROTEUS/` and `K218b_project/` are on
+the same filesystem (`/data/rdc49-2/`), so `mv` is a cheap rename, not a
+copy:
+
+```bash
+mv /data/rdc49-2/PROTEUS/output/<sweep_name> /data/rdc49-2/K218b_project/simulation_data/
+```
+
+This preserves the full `case_NNNNNN/` structure, which is what
+`plotting_scripts/` should expect to read. Because `simulation_data/*` is
+gitignored (see `.gitignore`), moving a sweep in has no effect on git
+history — it will not show up in `git status`.
 
 ## Compiling the paper
 

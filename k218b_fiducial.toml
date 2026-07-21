@@ -1,0 +1,141 @@
+# K2-18b b PROTEUS configuration file
+
+# This is the condifuration file for a K2-18b analogue simulation. Each parameter that is not held at its default value
+# is assigned a value, and a justification for this choice of value is given.
+
+config_version = "3.0"
+
+# -----------------------------------------------------------------------------------------------------------------------
+# Base Parameters
+[params]
+
+    [params.out]
+        path     = "K218b"     # K218b filepath
+
+    [params.dt]
+    
+        initial = 1e2     # preventing issues with boundary interior module
+
+    [params.stop]
+
+        [params.stop.time]
+            maximum = 1e10     # roughly age of universe
+            
+        [params.stop.solid]
+            phi_crit = 0.4    # consistent with boundary model
+
+        [params.stop.radeqm]
+            atol = 0.2     # consistency with SNS project
+
+# planet
+[planet]
+    mass_tot         = 8.63               # ~mass of K218b (Benneke 2019)
+    temperature_mode = 'adiabatic'        # consistency with boundary module
+    tsurf_init       = 4000               # ~sufficient to intialise mantle fully molten
+
+    # Element abundances (used when volatile_mode = 'elements')
+    [planet.elements]
+        H_mode   = 'ppmw'
+        H_budget = 10000    # *roughly corresponds to 1% EMF
+        C_budget = 0.32     # *100x solar metallicity (Asplund 2009)
+        N_budget = 0.09     # *100x solar metallicity (Asplund 2009)
+        S_budget = 0.04     # *100x solar metallicity (Asplund 2009)
+
+# Star
+[star]
+    mass = 0.495    # stellar mass of K218 (Cloutier 2019)
+
+    module = "mors"    # including stellar evolution in this project
+
+    [star.mors]
+        rot_period      = 39.3          # rotation period of K218 (Sairam 2025)
+        rot_pcntle      = "none"        # not used in this study
+        age_now         = 3.0           # current age of K218 (Sairam 2025)
+        spectrum_source = "muscles"     # all spectra are muscles
+        star_name       = "gj849"       # ~using substitute M dwarf spectra
+        
+    [star.dummy]
+        Teff             = 3645     # effective temperature of K218 (Sairam 2025)
+        calculate_radius = true     # self-consistency
+
+# Orbital system
+[orbit]
+    semimajoraxis = 0.15910     # semi-major axis of K218b (Benneke 2019)
+    zenith_angle  = 45          # midway between equator and pole
+    s0_factor     = 1.0         # assume dayside simulation
+
+    module = "none"     # tidal heating not needed with boundary module
+
+# Planetary structure
+[interior_struct]
+    core_frac = 0.325       # ~Earth PREM
+
+    module = "zalmoxis"    # use self consistent interior structure
+    
+[interior_struct.zalmoxis]
+    update_interval = 0    # updating the interior structure causes issues with boundary module
+
+# Interior
+[interior_energetics]
+    module = "boundary"    # required for this project
+    
+    latent_heat_of_fusion  = 4.0e5    # ~Schaefer 2016
+    phase_transition_width = 0.2      # reproduces experiments from Costa et. al.
+    rfront_loc             = 0.4      # reproduces experiments from Costa et. al.
+
+    [interior_energetics.boundary]
+        T_solidus                = 1400.0    # ~y intercept from figure 1 in Lebrun 2013
+        T_liquidus               = 2000.0    # ~y intercept from figure 1 in Lebrun 2013
+        critical_rayleigh_number = 1100.0    # ~Schaefer 2016
+        nusselt_exponent         = 0.33      # ~Schaefer 2016
+        silicate_heat_capacity   = 1200.0    # ~Schaefer 2016
+        silicate_density         = 4103.0    # ~Schaefer 2016
+        thermal_conductivity     = 4.2       # ~Schaefer 2016
+        thermal_diffusivity      = 1.0e-6    # ~Schaefer 2016
+        thermal_expansivity      = 2.0e-5    # ~Schaefer 2016
+
+[outgas]
+    module = "atmodeller"    # need to account for fugacity
+    fO2_shift_IW = -3
+
+    [outgas.atmodeller]
+        solubility_H2O        = "H2O_basalt_dixon95"
+        solubility_CO2        = "CO2_basalt_dixon95"
+        solubility_H2         = "H2_basalt_hirschmann12"
+        solubility_N2         = "N2_basalt_dasgupta22"
+        solubility_S2         = "S2_basalt_boulliung23"
+        solubility_CO         = "CO_basalt_armstrong15"
+        solubility_CH4        = "CH4_basalt_ardia13"
+
+        eos_H2O               = "none"
+        eos_CO2               = "none"
+        eos_H2                = "none"
+        eos_CH4               = "none"
+        eos_CO                = "none"
+
+# Atmosphere - physics table
+[atmos_clim]
+    surf_state      = "fixed"     # required for boundary module
+    spectral_group  = "Dayspring"     # consistency with SNS project
+    spectral_bands  = "48"            # consistency with SNS project
+    
+    module = "agni"
+
+    [atmos_clim.agni]
+        latent_heat = true             # scientific accuracy
+        real_gas    = true             # need to account for fugacity effects
+        ini_profile = 'dry_adiabat'    # most scientifically accurate starting point
+
+    [atmos_clim.dummy]
+        gamma = 0.8     # used for testing
+
+# Volatile escape
+[escape]
+    module = "zephyrus"     # including escape
+        
+[observe]
+    module = "petitRADTRANS"
+
+[atmos_chem]
+    module = "vulcan"
+    when   = "offline"     # post-processing# K2-18b b PROTEUS configuration file
