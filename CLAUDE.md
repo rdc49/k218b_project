@@ -13,8 +13,10 @@ Test the **molten gas dwarf hypothesis** for the sub-Neptune K2-18 b using the
    - bulk volatile **carbon** budget
    - bulk volatile **nitrogen** budget
    - bulk volatile **sulphur** budget
-2. For each grid point, generate a synthetic transmission spectrum from the
-   PROTEUS output.
+2. Atmospheric chemistry and the synthetic transmission spectrum for each
+   grid point are generated automatically as part of the PROTEUS pipeline
+   itself (not a separate post-processing step) and land in that run's own
+   output subdirectory.
 3. Compare synthetic spectra against one or more observed K2-18 b transmission
    spectra.
 4. Assess whether the observations are consistent with K2-18 b being a molten
@@ -33,7 +35,11 @@ step — that is this project.
 - `simulation_data/` — raw output from PROTEUS grid-sweep runs (fO2 x H x C x
   N x S). Currently empty; will hold one subdirectory of PROTEUS output per
   grid point (or per sweep), following the PROTEUS `output/<run>/` layout
-  described below. Treat this as **read-only input** to plotting scripts —
+  described below. PROTEUS itself never writes here: grid sweeps run in a
+  separate PROTEUS working directory, and completed sweep folders are only
+  moved into `simulation_data/` by hand after being checked over. So absence
+  of a run here doesn't mean it hasn't finished — it may just not have been
+  reviewed/moved yet. Treat this as **read-only input** to plotting scripts —
   never hand-edit simulation output.
 - `plotting_scripts/` — Python scripts that read from `simulation_data/` and
   produce figures. Currently empty. Each script's output figures should be
@@ -70,11 +76,9 @@ mantle solidifies or the planet reaches global energetic steady state
 Relevant CLI entry points (see `proteus_CLAUDE.md` for full detail):
 
 - `proteus start -c <config.toml>` — run a single simulation.
-- `proteus grid` — run a parameter grid/sweep (this is how `simulation_data/`
-  should be populated for the fO2 x H x C x N x S sweep).
-- `proteus observe` / `proteus offchem` — generate synthetic observables
-  (transmission spectra) from a completed run; this is the step that produces
-  the synthetic spectra to be compared against K2-18 b observations.
+- `proteus grid` — run a parameter grid/sweep. This is what generates the
+  sweep folders that get moved into `simulation_data/` (see above) for the
+  fO2 x H x C x N x S sweep.
 - `proteus plot -c <config.toml> all` — PROTEUS's own built-in diagnostic
   plots (distinct from the custom `plotting_scripts/` figures for the paper).
 - `proteus doctor` — environment diagnostics if a run environment looks broken.
@@ -100,10 +104,14 @@ bit-reproducibility.
 Simulation output for a run lives under `output/<run>/` in a PROTEUS working
 directory (gitignored there); the per-timestep history is in `hf_all`/`hf_row`
 type records with periodic interior snapshots (`<iter>_int.nc`) under `data/`.
-When copying/linking PROTEUS grid output into `simulation_data/` here, keep
-enough of that structure (or flatten it consistently via a documented
-convention) that `plotting_scripts/` can find run metadata (grid parameter
-values) alongside the physical output for each point.
+Atmospheric chemistry and the synthetic spectrum for each run are produced
+automatically by the PROTEUS pipeline (no separate `observe`/`offchem` call
+needed) and are written into that same per-run output subdirectory alongside
+the physical output. When a checked sweep folder is moved into
+`simulation_data/`, keep enough of that per-run structure intact (or flatten
+it consistently via a documented convention) that `plotting_scripts/` can
+find run metadata (grid parameter values), the physical output, and the
+synthetic spectrum together for each point.
 
 ## Compiling the paper
 
