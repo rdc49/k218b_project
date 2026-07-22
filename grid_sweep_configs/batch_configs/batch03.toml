@@ -6,9 +6,15 @@
 # 112 cores) on the IoA cluster, so a batch never idles cores no matter
 # which machine runs it -- see nogit_grid_sweep_cluster_howto.md /
 # grid_sweep_cluster_howto.md for the per-machine core counts.
+#
+# `symlink` points PROTEUS at raw_grid_output/ in this project so the
+# real data is written directly here (NFS-shared across the cluster),
+# rather than under PROTEUS/output/, which becomes just a symlink to it.
+# Move a completed run into simulation_data/ with scripts/move_sweep.py
+# once checked over -- see CLAUDE.md.
 
 output = "k218b_project_main_parameter_sweep_batch03/"
-symlink = ""
+symlink = "/data/rdc49-2/K218b_project/raw_grid_output/k218b_project_main_parameter_sweep_batch03"
 
 ref_config = "input/nogit_k218b_project/k218b_fiducial.toml"
 

@@ -21,5 +21,11 @@ __pycache__/
 simulation_data/*
 !simulation_data/.gitkeep
 
+# Staging area that batch grid configs' `symlink` field points PROTEUS at
+# directly (see grid_sweep_configs/batch_configs/); move a completed run
+# into simulation_data/ with scripts/move_sweep.py once checked over.
+raw_grid_output/*
+!raw_grid_output/.gitkeep
+
 # OS cruft
 .DS_Store

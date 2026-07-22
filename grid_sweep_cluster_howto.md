@@ -23,6 +23,13 @@ future agents/sessions so the steps below don't need to be re-discovered.
   any other node.
 - The `~/.bashrc` shell-context gotcha below applies identically everywhere,
   since it's the same file.
+- **These machines are shared with other people, not dedicated to this
+  project.** Always launch `proteus grid` under `nice -n 19` (see "Steps to
+  launch a sweep" below) so a sweep's CPU-bound worker processes yield to
+  anyone else's work on the same node, rather than competing with it on
+  equal footing. This is a courtesy floor, not a substitute for the
+  "Choosing a machine" load check below — still avoid a machine that
+  already looks busy with someone else's work.
 
 ## Choosing a machine
 
@@ -108,42 +115,68 @@ this project do; confirmed by writing this very file locally and seeing it
 appear instantly on cap003d). If working from an environment that does
 *not* mount `/data/rdc49-2`, do the same check over `ssh <machine>` instead.
 
-1. Read the `output = "..."` line from the sweep config to get the target
-   folder name (strip the trailing slash for comparisons):
+**Batch configs under `grid_sweep_configs/batch_configs/` set a `symlink`
+field** pointing at an absolute path under
+`/data/rdc49-2/K218b_project/raw_grid_output/`. When `symlink` is set,
+`PROTEUS/output/<name>` ends up being *just a symlink* to that path — the
+real risk of clobbering existing data is at the `symlink` target, not at
+`PROTEUS/output/<name>` itself. Worse, `Grid.__init__` (`PROTEUS/src/proteus/grid/manage.py`
+~lines 146-156) `rmtree`s the symlink target if it already has content,
+with **no confirmation prompt**, only refusing if it finds a `.git` folder
+inside. So for these configs, check the `symlink` target, not just
+`output`. Configs without a `symlink` field (or with it blank) behave as
+before — only `output` matters.
+
+1. Read both the `output = "..."` and `symlink = "..."` lines from the
+   sweep config (strip trailing slashes for comparisons; `symlink` may be
+   blank/absent for older configs):
    ```
-   grep -E '^\s*output\s*=' <config>.toml
+   grep -E '^\s*(output|symlink)\s*=' <config>.toml
    ```
-2. Check whether `/data/rdc49-2/PROTEUS/output/<name>` already exists:
+2. Check whether the *real* target already exists and has content — this
+   is the `symlink` path if set, otherwise `/data/rdc49-2/PROTEUS/output/<name>`:
    ```
-   ls -d /data/rdc49-2/PROTEUS/output/<name> 2>/dev/null && echo EXISTS
+   ls -d <symlink-path-or-/data/rdc49-2/PROTEUS/output/<name>> 2>/dev/null && echo EXISTS
    ```
 3. If it already exists, do **not** launch into it — it may hold results
    from a previous run, or belong to a sweep that's still running elsewhere
-   on the cluster. Find the first unused name by appending `_1`, `_2`, ...:
+   on the cluster, and launching would silently `rmtree` it. Find the
+   first unused suffix by appending `_1`, `_2`, ... and checking the same
+   real target (not `PROTEUS/output/<name>`, which will always look
+   available since it's just a symlink recreated fresh every launch):
    ```
    base=<name>; n=1; new="${base}_${n}"
-   while [ -d "/data/rdc49-2/PROTEUS/output/${new}" ]; do
+   while [ -d "<real-target-dir>/${new}" ]; do
      n=$((n+1)); new="${base}_${n}"
    done
    ```
 4. Never edit the user's original config file to do this. Instead, write a
-   scratch copy with only the `output` line changed, under
-   `input/nogit_grid_launch_configs/` (create it if it doesn't exist yet —
-   the `nogit_` prefix keeps it out of git no matter where the original
-   config lives):
+   scratch copy under `input/nogit_grid_launch_configs/` (create it if it
+   doesn't exist yet — the `nogit_` prefix keeps it out of git no matter
+   where the original config lives) with the `output` line changed to
+   `${new}` — **and, if the config sets `symlink`, that line changed to
+   match the same `${new}` suffix too**, so the two stay paired. A
+   mismatched pair (fresh `output` name but a stale/colliding `symlink`
+   target) defeats the whole point of renaming:
    ```
    mkdir -p input/nogit_grid_launch_configs
-   sed -E "s#^([[:space:]]*output[[:space:]]*=[[:space:]]*\")[^\"]*#\1${new}/#" \
+   sed -E \
+     -e "s#^([[:space:]]*output[[:space:]]*=[[:space:]]*\")[^\"]*#\1${new}/#" \
+     -e "s#^([[:space:]]*symlink[[:space:]]*=[[:space:]]*\")[^\"]*(/[^/\"]*)\"#\1\2_renamed_${new}\"#" \
      <config>.toml > "input/nogit_grid_launch_configs/$(basename <config>.toml .toml)_${new}.toml"
    ```
+   (That `symlink` substitution is illustrative, not copy-paste-safe for
+   every naming scheme — check the resulting file by eye before using it;
+   getting `output` and `symlink` out of sync is worse than not renaming
+   at all.)
 5. Use that scratch copy — not the original — as the `-c` argument in every
    command in the "Steps to launch a sweep" section below (dry-run and real
-   launch alike), and record which config/output you actually used in the
-   "Currently running sweeps" bookkeeping section at the bottom of this
-   file, so the next agent doesn't collide with it either.
+   launch alike), and record which config/output/symlink you actually used
+   in the "Currently running sweeps" bookkeeping section at the bottom of
+   this file, so the next agent doesn't collide with it either.
 
-If the output folder does not already exist, skip straight to launching
-with the original, unmodified config.
+If the real target does not already exist, skip straight to launching with
+the original, unmodified config.
 
 ## Shell-context gotcha (the thing that will trip you up)
 
@@ -181,8 +214,10 @@ every command below instead.
 2. (Optional but recommended) validate the sweep config first without
    spending compute:
    ```
-   ssh -t <machine> "bash -i -c 'conda activate proteus && proteus grid -c /data/rdc49-2/PROTEUS/<config-path> --dry-run'"
+   ssh -t <machine> "bash -i -c 'conda activate proteus && nice -n 19 proteus grid -c /data/rdc49-2/PROTEUS/<config-path> --dry-run'"
    ```
+   (The dry-run itself barely touches the CPU, but `nice` every `proteus
+   grid` invocation on principle — see the shared-machines note above.)
    A real dry-run writes per-case TOMLs under
    `output/<name>/cfgs/case_NNNNNN.toml` and each "case" flips from queued
    to exited within about a second — because no simulation actually runs.
@@ -202,10 +237,14 @@ every command below instead.
      && sleep 1 \
      && tmux send-keys -t <session_name> 'conda activate proteus' C-m \
      && sleep 3 \
-     && tmux send-keys -t <session_name> 'proteus grid -c <config-path>' C-m"
+     && tmux send-keys -t <session_name> 'nice -n 19 proteus grid -c <config-path>' C-m"
    ```
-   Creating the session with `-d` means it is already detached — there is no
-   need to attach and then detach again.
+   `nice -n 19` (the lowest possible scheduling priority) is not optional —
+   these machines are shared with other people, and `proteus grid`'s worker
+   subprocesses (forked from the niced parent, so they inherit its
+   priority automatically — no need to nice each one individually) are
+   CPU-bound for the whole run. Creating the session with `-d` means it is
+   already detached — there is no need to attach and then detach again.
 
 4. Confirm it's actually running the real sweep (not stuck, not another
    accidental dry-run):

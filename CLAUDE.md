@@ -32,24 +32,37 @@ step — that is this project.
 
 ## Directory layout
 
+- `raw_grid_output/` — staging area that batch grid configs' `symlink`
+  field points PROTEUS at directly, so sweep output is written here (on
+  this project's own disk) rather than under PROTEUS's own `output/`
+  directory. Not yet reviewed/checked — see "Where sweep output actually
+  lands" below before treating anything here as trustworthy.
 - `simulation_data/` — raw output from PROTEUS grid-sweep runs (fO2 x H x C x
   N x S), one subdirectory per sweep (each containing one `case_NNNNNN/`
   subdirectory per grid point), following the PROTEUS `output/<run>/` layout
-  described below. PROTEUS itself never writes here: grid sweeps run in a
-  separate PROTEUS working directory, and completed sweep folders are only
-  moved into `simulation_data/` by hand (via `scripts/move_sweep.py`) after
-  being checked over. So absence of a run here doesn't mean it hasn't
-  finished — it may just not have been reviewed/moved yet. Treat this as
-  **read-only input** to plotting scripts — never hand-edit simulation
-  output.
+  described below. PROTEUS itself never writes here directly: completed
+  sweep folders are only moved here by hand (via `scripts/move_sweep.py`,
+  from `raw_grid_output/`) after being checked over. So absence of a run
+  here doesn't mean it hasn't finished — it may just not have been
+  reviewed/moved yet. Treat this as **read-only input** to plotting
+  scripts — never hand-edit simulation output.
 - `plotting_scripts/` — Python scripts that read from `simulation_data/` and
   produce figures. Currently empty. Each script's output figures should be
   written into a subdirectory of `paper/Figures/`.
 - `scripts/` — project-management utility scripts (not paper-figure
-  scripts; those go in `plotting_scripts/`). Currently contains
-  `move_sweep.py`, which moves a completed sweep folder from the PROTEUS
-  output directory into `simulation_data/` (see "Moving a completed sweep"
-  below).
+  scripts; those go in `plotting_scripts/`). Contains `move_sweep.py`
+  (moves one whole, fully-finished sweep folder into `simulation_data/`;
+  see "Moving a completed sweep" below), `harvest_completed_cases.py`
+  (prints a cross-batch status summary and incrementally pulls individual
+  finished cases out of still-running batches, renamed by grid position;
+  cross-checks each case's log rather than trusting its on-disk `status`
+  alone — see "Monitoring and harvesting while batches are still running"
+  below), and `analyze_grid_sweep.py` (a separate, pre-existing, more
+  thorough per-sweep analysis tool, not written by this assistant, whose
+  log-cross-checking approach `harvest_completed_cases.py` reuses/adapts —
+  see its own docstring for the single-sweep-focused analysis and
+  plot-collection features it has that `harvest_completed_cases.py`
+  doesn't).
 - `grid_sweep_configs/` — `proteus grid` config files (`.toml`) defining
   parameter sweeps, as distinct from `k218b_fiducial.toml` (the per-run base
   config each sweep point derives from). `full_parameter_sweep.toml` is the
@@ -58,7 +71,8 @@ step — that is this project.
   single `proteus grid` run. `batch_configs/batch01.toml`..`batch08.toml`
   split it into 8 batches of 128 points each (split by `fO2_shift_IW`, 4
   values, x `H_budget` low/high half, 2 groups; each batch keeps the full
-  C/N/S axes).
+  C/N/S axes). Each batch also sets `symlink` to redirect its output into
+  `raw_grid_output/` — see "Where sweep output actually lands" below.
   - **Batch size is cluster-aware, not arbitrary.** `proteus grid` clamps
     its concurrency to `min(max_jobs, batch_size, os.cpu_count())`
     (`PROTEUS/src/proteus/grid/manage.py:367-370`) — `max_jobs=500` in
@@ -123,7 +137,18 @@ Relevant CLI entry points (see `proteus_CLAUDE.md` for full detail):
 - `proteus start -c <config.toml>` — run a single simulation.
 - `proteus grid` — run a parameter grid/sweep. This is what generates the
   sweep folders that get moved into `simulation_data/` (see above) for the
-  fO2 x H x C x N x S sweep.
+  fO2 x H x C x N x S sweep. **Always launch it as `nice -n 19 proteus
+  grid -c <config>`, never bare `proteus grid`.** The IoA cluster machines
+  this project's batches run on (see `grid_sweep_cluster_howto.md`) are
+  shared with other people, not dedicated to this project; `nice -n 19`
+  (lowest scheduling priority) makes a sweep's CPU-bound worker
+  subprocesses yield to anyone else's work on the same node rather than
+  compete with it on equal footing. The workers are forked from the niced
+  parent process and inherit its priority automatically, so niceing just
+  the `proteus grid` invocation itself is enough — no need to nice each
+  case individually. This is a courtesy floor, not a substitute for
+  checking a machine's load before picking it (see the howto's "Choosing a
+  machine" section).
 - `proteus plot -c <config.toml> all` — PROTEUS's own built-in diagnostic
   plots (distinct from the custom `plotting_scripts/` figures for the paper).
 - `proteus doctor` — environment diagnostics if a run environment looks broken.
@@ -299,12 +324,43 @@ automatically by the PROTEUS pipeline (no separate `observe`/`offchem` call
 needed) and are written into that same per-run output subdirectory alongside
 the physical output.
 
+### Where sweep output actually lands: `raw_grid_output/`
+
+Every `grid_sweep_configs/batch_configs/batch*.toml` sets `symlink` to an
+absolute path under `raw_grid_output/` in this project (e.g.
+`/data/rdc49-2/K218b_project/raw_grid_output/k218b_project_main_parameter_sweep_batch01`).
+PROTEUS's grid runner (`Grid.__init__` in
+`PROTEUS/src/proteus/grid/manage.py:100-158`) always anchors a sweep's name
+at `PROTEUS/output/<name>/`, but when `symlink` is set it creates the *real*
+directory at that path instead and leaves only a symlink at
+`PROTEUS/output/<name>/` pointing to it. So for every sweep launched with
+these batch configs, the actual data is written directly into this
+project's `raw_grid_output/` — on the same NFS-shared filesystem
+(`/data/rdc49-2/`) from any of the 14 cluster machines — with
+`PROTEUS/output/<name>` acting as nothing more than a pointer to it.
+
+**Why not symlink straight into `simulation_data/`?** Because
+`simulation_data/` is meant to hold only sweeps that have been checked over
+(see below) — writing there directly would remove that review step. It's
+also risky: `Grid.__init__` `rmtree`s the symlink target if it already
+exists (lines ~146-156, no confirmation, only refused if it contains
+`.git`), so relaunching a batch under a reused name onto an
+already-reviewed `simulation_data/` folder would silently wipe it.
+`raw_grid_output/` keeps that blast radius contained to not-yet-reviewed
+output.
+
+**Caveat**: this only applies to sweeps launched via the batch configs in
+this project. Older sweeps launched before this scheme existed (or any
+future config that doesn't set `symlink`) still write directly under
+`/data/rdc49-2/PROTEUS/output/<name>/` with no symlink involved —
+`scripts/move_sweep.py` (below) handles both cases automatically.
+
 ### Moving a completed sweep into `simulation_data/`
 
-The live PROTEUS install on this machine is `/data/rdc49-2/PROTEUS/`, and grid
-sweeps run there land in `/data/rdc49-2/PROTEUS/output/<sweep_name>/`. A
-sweep directory contains one subdirectory per grid point, `case_000000/`,
-`case_000001/`, etc., each with:
+A sweep directory — whether the real one under `raw_grid_output/<name>/`
+or an older one directly under `PROTEUS/output/<name>/` — contains one
+subdirectory per grid point, `case_000000/`, `case_000001/`, etc., each
+with:
 
 - `status` — two-line run state: a numeric code, then a text label, e.g.
   `Running`, `Completed (solidified)`, `Completed (net flux is small)`, or
@@ -329,32 +385,137 @@ sweep directory contains one subdirectory per grid point, `case_000000/`,
 per-case status tally (parsing the two-line `status` file format correctly),
 warns on `Running`/missing-status cases without hard-blocking, shows the
 total size, and prompts for confirmation before moving (`--yes` to skip the
-prompt). It defaults to `/data/rdc49-2/PROTEUS/output/` as the source and
-`simulation_data/` as the destination:
+prompt):
 
 ```bash
 python3 scripts/move_sweep.py <sweep_name>
 ```
 
+It looks for the real data under `raw_grid_output/<sweep_name>/` first
+(the symlinked-batch case); if not found there, it falls back to
+`/data/rdc49-2/PROTEUS/output/<sweep_name>/` (the older, non-symlinked
+case). Either way it moves the *real* directory — never the symlink itself
+— into `simulation_data/`, and if a matching symlink was left behind under
+`PROTEUS/output/<sweep_name>` pointing at the directory just moved, it
+deletes that now-dangling symlink too.
+
 Equivalent manual steps, if not using the script: tally status labels
-across a sweep with
+across a sweep (adjust the path if it's the older non-symlinked case) with
 
 ```bash
-for f in /data/rdc49-2/PROTEUS/output/<sweep_name>/*/status; do tail -n1 "$f"; echo; done | sort | uniq -c
+for f in raw_grid_output/<sweep_name>/*/status; do tail -n1 "$f"; echo; done | sort | uniq -c
 ```
 
-then, once satisfied, move the whole sweep folder in one go — `PROTEUS/`
-and `K218b_project/` are on the same filesystem (`/data/rdc49-2/`), so `mv`
-is a cheap rename, not a copy:
+then, once satisfied, move the whole sweep folder in one go (same
+filesystem, so `mv` is a cheap rename, not a copy) and clean up the
+dangling symlink:
 
 ```bash
-mv /data/rdc49-2/PROTEUS/output/<sweep_name> /data/rdc49-2/K218b_project/simulation_data/
+mv raw_grid_output/<sweep_name> simulation_data/
+rm /data/rdc49-2/PROTEUS/output/<sweep_name>   # only if it's a symlink pointing at the folder just moved
 ```
+
+**Do not `mv` or `cp` the `PROTEUS/output/<sweep_name>` path itself when
+it's a symlink** — that relocates the symlink, not the data, and leaves the
+real directory orphaned under `raw_grid_output/`.
 
 Either way, this preserves the full `case_NNNNNN/` structure, which is what
-`plotting_scripts/` should expect to read. Because `simulation_data/*` is
-gitignored (see `.gitignore`), moving a sweep in has no effect on git
-history — it will not show up in `git status`.
+`plotting_scripts/` should expect to read. Because `simulation_data/*` and
+`raw_grid_output/*` are both gitignored (see `.gitignore`), none of this
+has any effect on git history — it will not show up in `git status`.
+
+### Monitoring and harvesting while batches are still running: `scripts/harvest_completed_cases.py`
+
+`move_sweep.py` above moves one *entire* sweep folder at once, once every
+case in it is done — the right tool once a batch has fully finished.
+`scripts/harvest_completed_cases.py` is for the more common situation of
+several batches running concurrently on different cluster machines, each
+partway through its 128 cases: it (1) prints a per-batch status summary,
+discovered dynamically from `grid_sweep_configs/batch_configs/batch*.toml`
+(no hardcoded batch list to keep in sync), then (2) moves every individual
+case with a genuinely terminal outcome straight into `simulation_data/`,
+leaving still-running cases in their batch untouched. Safe to re-run
+repeatedly (by hand, cron, or its own `--watch SECONDS` loop) —
+already-harvested cases are simply gone from the source next time, and
+moved-to destinations are never overwritten.
+
+**Does not trust the on-disk `status` file at face value.** It reuses the
+log-cross-checking approach from `scripts/analyze_grid_sweep.py` (a
+separate, pre-existing tool, not written by this assistant): for every
+case with a `proteus_00.log`, the real outcome is derived from the log
+itself — a `Traceback` means a crash (tagged with the known-failure
+signature from `analyze_grid_sweep`'s table when recognised, e.g.
+`atmodeller_overflow`, `agni_coupling_deadlock`), `"Simulation stopped"`
+with no traceback means genuine success, and otherwise the case's
+liveness is checked directly rather than trusting `status`. This matters
+because `status` can lie — most importantly, a case can still be
+genuinely running while its `status` file already claims `"Completed"`;
+harvesting that case would rip its directory out from under a live
+simulation. Every run also prints a "STATUS-FILE DISAGREEMENTS" section
+flagging any case where the on-disk `status` doesn't match the log-derived
+outcome, whether or not that case got harvested.
+
+One piece of `analyze_grid_sweep.py`'s own logic is *not* reused as-is:
+its liveness check matches a bare `case_NNNNNN` against `pgrep -af
+"proteus start"`, which is only safe within a single sweep — here, every
+batch restarts its own case numbering from 0, so two different batches
+running concurrently would both have a "case_000005", and a bare-number
+match could pick up the *wrong* batch's live process. This script's own
+liveness check instead requires both the batch's `output` name and the
+case number to appear in the same process command line (matching
+PROTEUS's own `<output>/cfgs/<case>.toml` config-path convention), falling
+back to the same log-mtime-freshness heuristic otherwise. In practice this
+`pgrep` signal rarely fires anyway, since this script is typically
+invoked from a different machine than whichever of the 14 cluster nodes is
+actually running a given batch — the mtime-freshness fallback (which
+works fine across machines via the shared NFS filesystem) is doing most of
+the real work.
+
+```bash
+python3 scripts/harvest_completed_cases.py                # summary + harvest
+python3 scripts/harvest_completed_cases.py --summary-only  # just the summary
+python3 scripts/harvest_completed_cases.py --dry-run        # preview harvesting
+python3 scripts/harvest_completed_cases.py --watch 300       # repeat every 5 min
+```
+
+**Renaming**: a harvested case is renamed from its batch-local
+`case_NNNNNN` to
+`grid_H<i>_C<i>_N<i>_S<i>_fO2<i>__from_<batch>_<case>__<outcome>`, where
+each index (0-3) is that axis's position in `full_parameter_sweep.toml`'s
+value list (read from the case's own `init_coupler.toml`, not recomputed
+from batch/case numbering, so it's correct even if a batch's internal
+split logic ever changes again), and `<outcome>` is the log-derived
+category (`1_success`, `2_fatal_crash_main_loop`, `3_crash_observe_step`,
+or `6_unclassified` for killed-externally), plus the matched failure
+signature name when there is one, e.g.
+`grid_H0_C2_N1_S3_fO20__from_batch01_case000042__2_fatal_crash_main_loop_atmodeller_overflow`.
+The `grid_H.._C.._N.._S.._fO2..` prefix is what identifies the case's
+position in the full 1024-point sweep; the rest is outcome/provenance,
+kept for traceability and so failed vs. successful cases can be told apart
+(e.g. via `ls simulation_data | grep 1_success`) without reopening each
+case's log.
+
+**Categories 4 and 5 (genuinely still running, whether or not `status`
+agrees) are never harvested, and neither is category 6 with no
+`proteus_00.log` at all** (ambiguous between never-started and
+crashed-before-logging — left alone rather than guessed at).
+
+**Known limitation, accepted rather than engineered around**: `proteus
+grid`'s own manager does one final pass over every case's status file
+right when a whole batch's last case finishes (end of `Grid.run()` in
+`PROTEUS/src/proteus/grid/manage.py`), and raises if a status file is
+missing. If this script harvests a case out of a batch in the same instant
+that batch's very last case completes, that final pass could crash with a
+traceback — but only after all of that batch's actual simulation work is
+already done, so nothing is lost; the manager process's log just ends in
+an exception instead of a clean finish. Narrow window, cosmetic impact,
+not otherwise guarded against.
+
+**A batch's own container directory isn't cleaned up.** Once every case in
+a batch has been harvested, `raw_grid_output/<batch_output_name>/` still
+exists (now containing only `cfgs/`, `logs/`, `manager.log`, etc., no more
+`case_*` dirs) — harmless, but a manual `rm -r` once you're sure a batch is
+fully drained is fine if you want to tidy it up.
 
 ## Compiling the paper
 
