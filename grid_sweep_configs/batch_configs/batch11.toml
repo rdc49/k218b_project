@@ -1,6 +1,6 @@
-# Batch 8 of 16 -- K218b main parameter sweep
+# Batch 11 of 16 -- K218b main parameter sweep
 # Full sweep definition: ../full_parameter_sweep.toml
-# This batch: fO2_shift_IW = -2 ; H_budget = high half [29240.177382128637, 49999.99999999999] ; C_budget = high half [0.32, 3.2]
+# This batch: fO2_shift_IW = -1 ; H_budget = high half [29240.177382128637, 49999.99999999999] ; C_budget = low half [0.0032, 0.032]
 # Grid size: 1 (fO2) x 2 (H_budget) x 2 (C_budget) x 4 (N_budget) x 4 (S_budget) = 64 points
 #
 # Batch size chosen so every "typical" cluster machine (24 or 48 cores --
@@ -22,8 +22,8 @@
 # Move a completed run into simulation_data/ with scripts/move_sweep.py
 # once checked over -- see CLAUDE.md.
 
-output = "k218b_project_main_parameter_sweep_batch08/"
-symlink = "/data/rdc49-2/K218b_project/raw_grid_output/k218b_project_main_parameter_sweep_batch08"
+output = "k218b_project_main_parameter_sweep_batch11/"
+symlink = "/data/rdc49-2/K218b_project/raw_grid_output/k218b_project_main_parameter_sweep_batch11"
 
 ref_config = "input/nogit_k218b_project/k218b_fiducial.toml"
 
@@ -38,7 +38,7 @@ max_mem  = 3
 
 ["planet.elements.C_budget"]
     method = "direct"
-    values = [0.32,3.2]
+    values = [0.0032,0.032]
 
 ["planet.elements.N_budget"]
     method = "direct"
@@ -50,4 +50,4 @@ max_mem  = 3
 
 ["outgas.fO2_shift_IW"]
     method = "direct"
-    values = [-2.0]
+    values = [-1.0]

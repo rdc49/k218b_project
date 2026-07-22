@@ -68,28 +68,45 @@ step — that is this project.
   config each sweep point derives from). `full_parameter_sweep.toml` is the
   reference definition of the complete fO2 x H x C x N x S grid (1024
   points: 4 values per axis) — it is **not** meant to be submitted as a
-  single `proteus grid` run. `batch_configs/batch01.toml`..`batch08.toml`
-  split it into 8 batches of 128 points each (split by `fO2_shift_IW`, 4
-  values, x `H_budget` low/high half, 2 groups; each batch keeps the full
-  C/N/S axes). Each batch also sets `symlink` to redirect its output into
-  `raw_grid_output/` — see "Where sweep output actually lands" below.
-  - **Batch size is cluster-aware, not arbitrary.** `proteus grid` clamps
-    its concurrency to `min(max_jobs, batch_size, os.cpu_count())`
+  single `proteus grid` run. `batch_configs/batch01.toml`..`batch16.toml`
+  split it into 16 batches of 64 points each (split by `fO2_shift_IW`, 4
+  values, x `H_budget` low/high half, 2 groups, x `C_budget` low/high half,
+  2 groups; each batch keeps the full N/S axes). Each batch also sets
+  `symlink` to redirect its output into `raw_grid_output/` — see "Where
+  sweep output actually lands" below.
+  - **Batch size trades off two competing cluster-aware goals, not an
+    arbitrary number.** `proteus grid` clamps its concurrency to
+    `min(max_jobs, batch_size, os.cpu_count())`
     (`PROTEUS/src/proteus/grid/manage.py:367-370`) — `max_jobs=500` in
     every batch file is already effectively unlimited, so batch *size*
-    (grid-point count) is the only thing that determines whether a
-    machine's cores sit idle. A batch smaller than the launching machine's
-    core count leaves the difference permanently idle for the whole run;
-    an oversized batch never wastes cores — it just runs more internal
-    waves and takes proportionally longer on a smaller machine. 128 was
-    chosen because it exceeds the core count of every machine on the IoA
-    cluster (14 machines, 24-112 cores each; `cap005a` is the largest at
-    112 — see `grid_sweep_cluster_howto.md`), so no batch ever idles cores
-    no matter which of the 14 machines runs it. Don't shrink batch size
-    below the largest machine's core count without re-checking this
-    reasoning.
+    (grid-point count) is what determines whether a machine's cores sit
+    idle. A batch smaller than the launching machine's core count leaves
+    the difference permanently idle for the whole run; an oversized batch
+    never wastes cores — it just runs more internal waves and takes
+    proportionally longer on a smaller machine. Given that, there are two
+    things to optimise for on the IoA cluster (14 machines, 24-112 cores
+    each; `cap005a` is the outlier at 112, the other 13 are 24 or
+    48 — see `grid_sweep_cluster_howto.md`): (1) no single batch should
+    idle cores on whichever machine runs it, and (2) there should be
+    enough independent batches to occupy most/all 14 machines at once.
+    These pull in opposite directions given the fixed 1024-point grid: an
+    earlier version of this file sized every batch at 128 (above
+    `cap005a`'s 112 cores), satisfying (1) perfectly but only yielding 8
+    batches total — capping simultaneous cluster usage at 8 of 14 machines
+    no matter how many were actually free. The current 64-point size is
+    instead sized above the *typical* machine (48 cores, covering 13 of
+    the 14 machines), giving 16 batches — enough for all 14 machines with
+    2 spare. The accepted trade-off: a single 64-point batch landing on
+    `cap005a` only fills 64 of its 112 cores, leaving 48 idle for that
+    batch's duration — a much smaller loss than leaving whole machines
+    idle, so the preferred one here. If `cap005a`'s spare capacity matters
+    for a given push, launch a second batch there concurrently in a
+    separate tmux session rather than leaving it under-filled. Don't
+    shrink batch size below 48 (the typical machine's core count) without
+    re-checking this reasoning, and don't grow it back toward 112+ without
+    remembering that re-caps simultaneous machine usage.
   - The batches exactly partition the full grid — every batch's `output`
-    folder name is unique and the union of all 8 batches' grid points
+    folder name is unique and the union of all 16 batches' grid points
     equals the full grid with zero overlap (verified programmatically when
     the batches were created/re-split). If the full sweep definition, the
     batch size, or the cluster's machine specs ever change, regenerate the
@@ -516,6 +533,49 @@ a batch has been harvested, `raw_grid_output/<batch_output_name>/` still
 exists (now containing only `cfgs/`, `logs/`, `manager.log`, etc., no more
 `case_*` dirs) — harmless, but a manual `rm -r` once you're sure a batch is
 fully drained is fine if you want to tidy it up.
+
+### Scheduled harvesting via cron
+
+`harvest_completed_cases.py` runs automatically every day at 07:00 (all
+7 days), via this machine's user crontab (`crontab -l` to view,
+`crontab -e` to edit):
+
+```cron
+0 7 * * * flock -n /tmp/k218b_harvest_cron.lock /data/rdc49-2/anaconda3/envs/proteus/bin/python3 /data/rdc49-2/K218b_project/scripts/harvest_completed_cases.py >> /data/rdc49-2/K218b_project/logs/harvest_cron.log 2>&1
+```
+
+Notes on the specific pieces of this line, for anyone editing it later:
+
+- Uses the `proteus` conda env's own `python3` explicitly by absolute path
+  (`/data/rdc49-2/anaconda3/envs/proteus/bin/python3`), not a bare
+  `python3` — cron runs jobs in a minimal non-interactive, non-login shell
+  that never sources `~/.bashrc` (its `[ -z "$PS1" ] && return` guard skips
+  everything for non-interactive shells; see the shell-context gotcha in
+  `grid_sweep_cluster_howto.md`), so neither `module load` nor `conda
+  activate` ever happens for a cron job on this machine.
+- `flock -n /tmp/k218b_harvest_cron.lock` prevents two overlapping runs
+  (e.g. if a previous invocation were still going, perhaps stuck on an NFS
+  hiccup) — `-n` makes it skip rather than queue if the lock is already
+  held, so a stuck run blocks at most that one day's harvest, not every
+  subsequent day's.
+- Output is appended to `logs/harvest_cron.log` (gitignored, like
+  `simulation_data/` and `raw_grid_output/`) rather than left for cron's
+  own mail-on-output behaviour, which may not even be configured on this
+  machine. Check that file for history/errors, not system mail. The
+  script itself prints timestamped start/finish/failure banners into that
+  log (see its docstring) precisely so a day's entry is easy to find and
+  an error is easy to grep for in a file that just keeps growing.
+- The existing crontab already had two unrelated jobs (`daily_github_backup.py`,
+  `backup_to_hardrive.py`) — this entry was appended, not replacing
+  anything. If you ever need to edit the crontab, use `crontab -l` /
+  `crontab -e` in place rather than regenerating it from scratch, to avoid
+  disturbing those.
+
+**Unrelated finding worth flagging** (same issue already noted for
+`~/.bashrc` in `grid_sweep_cluster_howto.md`): the crontab has a
+`GITHUB_TOKEN=...` line with a real personal access token in plaintext.
+Don't propagate it anywhere; flag it to the user for rotation if noticed
+again.
 
 ## Compiling the paper
 

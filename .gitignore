@@ -27,5 +27,9 @@ simulation_data/*
 raw_grid_output/*
 !raw_grid_output/.gitkeep
 
+# Runtime logs (e.g. the harvest_completed_cases.py cron job's log file)
+logs/*
+!logs/.gitkeep
+
 # OS cruft
 .DS_Store

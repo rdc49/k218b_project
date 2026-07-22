@@ -81,6 +81,14 @@ which point all of that batch's actual simulation work is already done, so
 nothing is lost, but the manager process log ends in an exception instead of
 a clean finish. Narrow window, cosmetic impact, not otherwise guarded against.
 
+Scheduled daily via cron (see CLAUDE.md, "Scheduled harvesting via cron"),
+so this script never lets an unexpected exception propagate uncaught: every
+run is wrapped in a try/except that prints a timestamped start/finish/
+failure banner (so a concatenated daily log file has clear boundaries
+between runs and errors are easy to grep for), and stdout/stderr are
+explicitly line-buffered so interleaved print()/warning output stays in
+chronological order once redirected to a log file instead of a terminal.
+
 Usage:
     python scripts/harvest_completed_cases.py [--summary-only] [--dry-run]
 
@@ -97,7 +105,9 @@ import shutil
 import sys
 import time
 import tomllib
+import traceback
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -487,26 +497,61 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    # Line-buffer stdout/stderr regardless of invocation context. When this
+    # script's output is redirected to a log file (as it is when run from
+    # cron) rather than a terminal, Python fully buffers stdout by default,
+    # so the stdout print()s and the stderr warning()s can end up written to
+    # the file in the wrong chronological order relative to each other.
+    # Line-buffering both keeps a cron log readable top-to-bottom.
+    sys.stdout.reconfigure(line_buffering=True)
+    sys.stderr.reconfigure(line_buffering=True)
+
     full_axes = load_full_grid_axes(args.full_sweep)
     batches = discover_batches(args.batch_configs, args.proteus_output)
     if not batches:
         print(f"error: no batch*.toml files found under {args.batch_configs}", file=sys.stderr)
         return 1
 
-    def run_once() -> None:
-        if args.summary_only:
-            categories, disagreements, _ = scan_batches(batches, time.time())
-        else:
-            categories, disagreements = harvest(batches, full_axes, args.dest, args.dry_run)
-        print_summary(categories, disagreements)
+    def run_once() -> bool:
+        """Run one summary/harvest pass. Returns True on success.
 
-    run_once()
+        Never lets an unexpected exception escape uncaught: a cron-invoked
+        run has no one watching the terminal, so an untimestamped bare
+        traceback halfway through a log file is much harder to find and
+        make sense of later than a clearly bounded, timestamped failure
+        block. Prints a start/finish banner either way so a concatenated
+        log file (as produced by a daily cron job appending to one file)
+        has an unambiguous boundary between runs.
+        """
+        print(f"=== harvest_completed_cases.py run started {datetime.now().isoformat(timespec='seconds')} ===")
+        try:
+            if args.summary_only:
+                categories, disagreements, _ = scan_batches(batches, time.time())
+            else:
+                categories, disagreements = harvest(batches, full_axes, args.dest, args.dry_run)
+            print_summary(categories, disagreements)
+        except Exception:
+            print(
+                f"=== harvest_completed_cases.py run FAILED "
+                f"{datetime.now().isoformat(timespec='seconds')} ===",
+                file=sys.stderr,
+            )
+            traceback.print_exc()
+            print("=" * 70, file=sys.stderr)
+            return False
+        print(f"=== harvest_completed_cases.py run finished {datetime.now().isoformat(timespec='seconds')} ===")
+        return True
+
+    ok = run_once()
     while args.watch:
         time.sleep(args.watch)
         print()
+        # A transient failure (e.g. a momentary NFS hiccup) shouldn't kill
+        # an otherwise long-running --watch loop -- it's already been
+        # logged clearly by run_once(); just try again next interval.
         run_once()
 
-    return 0
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":
