@@ -1,7 +1,7 @@
-# Batch 3 of 8 -- K218b main parameter sweep
+# Batch 3 of 32 -- K218b main parameter sweep
 # Full sweep definition: ../full_parameter_sweep.toml
-# This batch: fO2_shift_IW = -2 ; H_budget = low half [1.00e4, 1.71e4]
-# Grid size: 1 (fO2) x 2 (H_budget) x 4 (C_budget) x 4 (N_budget) x 4 (S_budget) = 128 points
+# This batch: fO2_shift_IW = -3 ; H_budget = low half [1.00e4, 1.71e4] ; C_budget = 0.32
+# Grid size: 1 (fO2) x 2 (H_budget) x 1 (C_budget) x 4 (N_budget) x 4 (S_budget) = 32 points
 
 output = "k218b_project_main_parameter_sweep_batch03/"
 symlink = ""
@@ -19,16 +19,16 @@ max_mem  = 3
 
 ["planet.elements.C_budget"]
     method = "direct"
-    values = [3.2e-3,3.2e-2,3.2e-1,3.2e0]
+    values = [0.32]
 
 ["planet.elements.N_budget"]
     method = "direct"
-    values = [9e-4,9e-3,9e-2,9e-1]
+    values = [0.0009,0.009,0.09,0.9]
 
 ["planet.elements.S_budget"]
     method = "direct"
-    values = [4e-3,4e-2,4e-1,4e0]
+    values = [0.004,0.04,0.4,4.0]
 
 ["outgas.fO2_shift_IW"]
     method = "direct"
-    values = [-2]
+    values = [-3.0]

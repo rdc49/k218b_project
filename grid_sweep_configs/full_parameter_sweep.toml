@@ -3,11 +3,11 @@
 # Full factorial grid: 4 (H_budget) x 4 (C_budget) x 4 (N_budget) x
 # 4 (S_budget) x 4 (fO2_shift_IW) = 1024 points. This is NOT meant to be
 # submitted as a single `proteus grid` run across the whole cluster at once.
-# It is split into 8 batches of 128 points each in batch_configs/
-# (batch01.toml .. batch08.toml), split by fO2_shift_IW (4 values) x
-# H_budget low/high half (2 groups), each batch keeping the full C/N/S
-# axes. This file is kept as the reference definition of the full sweep;
-# submit the batch files instead.
+# It is split into 32 batches of 32 points each in batch_configs/
+# (batch01.toml .. batch32.toml), split by fO2_shift_IW (4 values) x
+# H_budget low/high half (2 groups) x C_budget single value (4 values),
+# each batch keeping the full N/S axes. This file is kept as the reference
+# definition of the full sweep; submit the batch files instead.
 
 output = "k218b_project_main_parameter_sweep/"
 symlink = ""

@@ -1,9 +1,9 @@
-# Batch 6 of 32 -- K218b main parameter sweep
+# Batch 16 of 32 -- K218b main parameter sweep
 # Full sweep definition: ../full_parameter_sweep.toml
-# This batch: fO2_shift_IW = -3 ; H_budget = high half [2.92e4, 5.00e4] ; C_budget = 0.032
+# This batch: fO2_shift_IW = -2 ; H_budget = high half [2.92e4, 5.00e4] ; C_budget = 3.2
 # Grid size: 1 (fO2) x 2 (H_budget) x 1 (C_budget) x 4 (N_budget) x 4 (S_budget) = 32 points
 
-output = "k218b_project_main_parameter_sweep_batch06/"
+output = "k218b_project_main_parameter_sweep_batch16/"
 symlink = ""
 
 ref_config = "input/nogit_k218b_project/k218b_fiducial.toml"
@@ -19,7 +19,7 @@ max_mem  = 3
 
 ["planet.elements.C_budget"]
     method = "direct"
-    values = [0.032]
+    values = [3.2]
 
 ["planet.elements.N_budget"]
     method = "direct"
@@ -31,4 +31,4 @@ max_mem  = 3
 
 ["outgas.fO2_shift_IW"]
     method = "direct"
-    values = [-3.0]
+    values = [-2.0]

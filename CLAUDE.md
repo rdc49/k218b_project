@@ -55,16 +55,17 @@ step — that is this project.
   config each sweep point derives from). `full_parameter_sweep.toml` is the
   reference definition of the complete fO2 x H x C x N x S grid (1024
   points: 4 values per axis) — it is **not** meant to be submitted as a
-  single `proteus grid` run. `batch_configs/batch01.toml`..`batch08.toml`
-  split it into 8 batches of 128 points each (split by `fO2_shift_IW`, 4
-  values, x `H_budget` low/high half, 2 groups; each batch keeps the full
-  C/N/S axes), sized for launching a few at a time rather than saturating
-  the whole cluster at once. The batches exactly partition the full grid —
-  every batch's `output` folder name is unique and the union of all 8
-  batches' grid points equals the full grid with zero overlap (verified
-  programmatically when the batches were created). If the full sweep
-  definition ever changes, regenerate the batch files from it rather than
-  hand-editing them independently, to keep the partition exact.
+  single `proteus grid` run. `batch_configs/batch01.toml`..`batch32.toml`
+  split it into 32 batches of 32 points each (split by `fO2_shift_IW`, 4
+  values, x `H_budget` low/high half, 2 groups, x `C_budget` single value,
+  4 values; each batch keeps the full N/S axes), sized for launching a few
+  at a time rather than saturating the whole cluster at once. The batches
+  exactly partition the full grid — every batch's `output` folder name is
+  unique and the union of all 32 batches' grid points equals the full grid
+  with zero overlap (verified programmatically when the batches were
+  created/re-split). If the full sweep definition or the batch size ever
+  changes, regenerate the batch files from it rather than hand-editing them
+  independently, to keep the partition exact.
 - `paper/` — MNRAS-format LaTeX source for the resulting paper (`main.tex`,
   `references.bib`, `mnras.cls`/`mnras.bst`, `Figures/`). It currently
   contains the predecessor paper (`calder_2026`) as a starting template/style
