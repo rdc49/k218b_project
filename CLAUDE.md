@@ -33,17 +33,23 @@ step — that is this project.
 ## Directory layout
 
 - `simulation_data/` — raw output from PROTEUS grid-sweep runs (fO2 x H x C x
-  N x S). Currently empty; will hold one subdirectory of PROTEUS output per
-  grid point (or per sweep), following the PROTEUS `output/<run>/` layout
+  N x S), one subdirectory per sweep (each containing one `case_NNNNNN/`
+  subdirectory per grid point), following the PROTEUS `output/<run>/` layout
   described below. PROTEUS itself never writes here: grid sweeps run in a
   separate PROTEUS working directory, and completed sweep folders are only
-  moved into `simulation_data/` by hand after being checked over. So absence
-  of a run here doesn't mean it hasn't finished — it may just not have been
-  reviewed/moved yet. Treat this as **read-only input** to plotting scripts —
-  never hand-edit simulation output.
+  moved into `simulation_data/` by hand (via `scripts/move_sweep.py`) after
+  being checked over. So absence of a run here doesn't mean it hasn't
+  finished — it may just not have been reviewed/moved yet. Treat this as
+  **read-only input** to plotting scripts — never hand-edit simulation
+  output.
 - `plotting_scripts/` — Python scripts that read from `simulation_data/` and
   produce figures. Currently empty. Each script's output figures should be
   written into a subdirectory of `paper/Figures/`.
+- `scripts/` — project-management utility scripts (not paper-figure
+  scripts; those go in `plotting_scripts/`). Currently contains
+  `move_sweep.py`, which moves a completed sweep folder from the PROTEUS
+  output directory into `simulation_data/` (see "Moving a completed sweep"
+  below).
 - `paper/` — MNRAS-format LaTeX source for the resulting paper (`main.tex`,
   `references.bib`, `mnras.cls`/`mnras.bst`, `Figures/`). It currently
   contains the predecessor paper (`calder_2026`) as a starting template/style
@@ -162,13 +168,14 @@ sweeps run there land in `/data/rdc49-2/PROTEUS/output/<sweep_name>/`. A
 sweep directory contains one subdirectory per grid point, `case_000000/`,
 `case_000001/`, etc., each with:
 
-- `status` — one-line run state, e.g. `Running`, `Completed (solidified)`,
-  `Completed (net flux is small)`, or `Error (...)`. **Check this in every
-  case before moving the sweep** — a folder isn't ready to move while any
-  case still says `Running` (still in progress) or has no `status` file at
-  all (never started/crashed early). `Error (...)` cases are not failures of
-  the move itself, but note them so the analysis in `plotting_scripts/`
-  knows which grid points to exclude/flag.
+- `status` — two-line run state: a numeric code, then a text label, e.g.
+  `Running`, `Completed (solidified)`, `Completed (net flux is small)`, or
+  `Error (...)`. **Check this in every case before moving the sweep** — a
+  folder isn't ready to move while any case still says `Running` (still in
+  progress) or has no `status` file at all (never started/crashed early).
+  `Error (...)` cases are not failures of the move itself, but note them so
+  the analysis in `plotting_scripts/` knows which grid points to
+  exclude/flag.
 - `init_coupler.toml` — the resolved config for that case, including its
   grid-point parameter values (e.g. `fO2_shift_IW`) — this is how
   `plotting_scripts/` should recover each case's position in the fO2 x H x C
@@ -180,23 +187,33 @@ sweep directory contains one subdirectory per grid point, `case_000000/`,
   output generated automatically by the pipeline (see above).
 - `plots/` — PROTEUS's own built-in diagnostic plots for that case.
 
-To check status across a whole sweep before moving it:
+**Preferred method**: `scripts/move_sweep.py <sweep_name>` prints the
+per-case status tally (parsing the two-line `status` file format correctly),
+warns on `Running`/missing-status cases without hard-blocking, shows the
+total size, and prompts for confirmation before moving (`--yes` to skip the
+prompt). It defaults to `/data/rdc49-2/PROTEUS/output/` as the source and
+`simulation_data/` as the destination:
 
 ```bash
-for f in /data/rdc49-2/PROTEUS/output/<sweep_name>/*/status; do cat "$f"; echo; done | sort | uniq -c
+python3 scripts/move_sweep.py <sweep_name>
 ```
 
-Once every case reports a terminal state you're satisfied with (no
-unexpected `Running` or missing-status cases), move the whole sweep folder
-into `simulation_data/` in one go — `PROTEUS/` and `K218b_project/` are on
-the same filesystem (`/data/rdc49-2/`), so `mv` is a cheap rename, not a
-copy:
+Equivalent manual steps, if not using the script: tally status labels
+across a sweep with
+
+```bash
+for f in /data/rdc49-2/PROTEUS/output/<sweep_name>/*/status; do tail -n1 "$f"; echo; done | sort | uniq -c
+```
+
+then, once satisfied, move the whole sweep folder in one go — `PROTEUS/`
+and `K218b_project/` are on the same filesystem (`/data/rdc49-2/`), so `mv`
+is a cheap rename, not a copy:
 
 ```bash
 mv /data/rdc49-2/PROTEUS/output/<sweep_name> /data/rdc49-2/K218b_project/simulation_data/
 ```
 
-This preserves the full `case_NNNNNN/` structure, which is what
+Either way, this preserves the full `case_NNNNNN/` structure, which is what
 `plotting_scripts/` should expect to read. Because `simulation_data/*` is
 gitignored (see `.gitignore`), moving a sweep in has no effect on git
 history — it will not show up in `git status`.
