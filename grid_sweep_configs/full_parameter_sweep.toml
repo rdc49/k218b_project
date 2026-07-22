@@ -1,0 +1,42 @@
+# Config file for the main parameter sweep of the K218b project.
+#
+# Full factorial grid: 4 (H_budget) x 4 (C_budget) x 4 (N_budget) x
+# 4 (S_budget) x 4 (fO2_shift_IW) = 1024 points. This is NOT meant to be
+# submitted as a single `proteus grid` run across the whole cluster at once.
+# It is split into 8 batches of 128 points each in batch_configs/
+# (batch01.toml .. batch08.toml), split by fO2_shift_IW (4 values) x
+# H_budget low/high half (2 groups), each batch keeping the full C/N/S
+# axes. This file is kept as the reference definition of the full sweep;
+# submit the batch files instead.
+
+output = "k218b_project_main_parameter_sweep/"
+symlink = ""
+
+ref_config = "input/nogit_k218b_project/k218b_fiducial.toml"
+
+use_slurm = false
+max_jobs = 500
+max_days = 1
+max_mem  = 3
+
+["planet.elements.H_budget"]
+    method = "logspace"
+    start  = 1e4
+    stop   = 5e4
+    count  = 4
+
+["planet.elements.C_budget"]
+    method = "direct"
+    values = [3.2e-3,3.2e-2,3.2e-1,3.2e0]
+
+["planet.elements.N_budget"]
+    method = "direct"
+    values = [9e-4,9e-3,9e-2,9e-1]
+
+["planet.elements.S_budget"]
+    method = "direct"
+    values = [4e-3,4e-2,4e-1,4e0]
+    
+["outgas.fO2_shift_IW"]
+    method = "direct"
+    values = [-3,-2,-1,0]

@@ -29,7 +29,7 @@ config_version = "3.0"
 
 # planet
 [planet]
-    mass_tot         = 8.63               # ~mass of K218b (Benneke 2019)
+    mass_tot         = 8.63               # ~mass of K218b (Cloutier 2019)
     temperature_mode = 'adiabatic'        # consistency with boundary module
     tsurf_init       = 4000               # ~sufficient to intialise mantle fully molten
 
@@ -53,10 +53,6 @@ config_version = "3.0"
         age_now         = 3.0           # current age of K218 (Sairam 2025)
         spectrum_source = "muscles"     # all spectra are muscles
         star_name       = "gj849"       # ~using substitute M dwarf spectra
-        
-    [star.dummy]
-        Teff             = 3645     # effective temperature of K218 (Sairam 2025)
-        calculate_radius = true     # self-consistency
 
 # Orbital system
 [orbit]
@@ -95,23 +91,17 @@ config_version = "3.0"
         thermal_expansivity      = 2.0e-5    # ~Schaefer 2016
 
 [outgas]
-    module = "atmodeller"    # need to account for fugacity
+    module = "atmodeller"
     fO2_shift_IW = -3
 
     [outgas.atmodeller]
-        solubility_H2O        = "H2O_basalt_dixon95"
+        solubility_H2O        = "H2O_peridotite_sossi23"
         solubility_CO2        = "CO2_basalt_dixon95"
         solubility_H2         = "H2_basalt_hirschmann12"
         solubility_N2         = "N2_basalt_dasgupta22"
         solubility_S2         = "S2_basalt_boulliung23"
         solubility_CO         = "CO_basalt_armstrong15"
         solubility_CH4        = "CH4_basalt_ardia13"
-
-        eos_H2O               = "none"
-        eos_CO2               = "none"
-        eos_H2                = "none"
-        eos_CH4               = "none"
-        eos_CO                = "none"
 
 # Atmosphere - physics table
 [atmos_clim]
