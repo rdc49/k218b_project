@@ -55,17 +55,32 @@ step — that is this project.
   config each sweep point derives from). `full_parameter_sweep.toml` is the
   reference definition of the complete fO2 x H x C x N x S grid (1024
   points: 4 values per axis) — it is **not** meant to be submitted as a
-  single `proteus grid` run. `batch_configs/batch01.toml`..`batch32.toml`
-  split it into 32 batches of 32 points each (split by `fO2_shift_IW`, 4
-  values, x `H_budget` low/high half, 2 groups, x `C_budget` single value,
-  4 values; each batch keeps the full N/S axes), sized for launching a few
-  at a time rather than saturating the whole cluster at once. The batches
-  exactly partition the full grid — every batch's `output` folder name is
-  unique and the union of all 32 batches' grid points equals the full grid
-  with zero overlap (verified programmatically when the batches were
-  created/re-split). If the full sweep definition or the batch size ever
-  changes, regenerate the batch files from it rather than hand-editing them
-  independently, to keep the partition exact.
+  single `proteus grid` run. `batch_configs/batch01.toml`..`batch08.toml`
+  split it into 8 batches of 128 points each (split by `fO2_shift_IW`, 4
+  values, x `H_budget` low/high half, 2 groups; each batch keeps the full
+  C/N/S axes).
+  - **Batch size is cluster-aware, not arbitrary.** `proteus grid` clamps
+    its concurrency to `min(max_jobs, batch_size, os.cpu_count())`
+    (`PROTEUS/src/proteus/grid/manage.py:367-370`) — `max_jobs=500` in
+    every batch file is already effectively unlimited, so batch *size*
+    (grid-point count) is the only thing that determines whether a
+    machine's cores sit idle. A batch smaller than the launching machine's
+    core count leaves the difference permanently idle for the whole run;
+    an oversized batch never wastes cores — it just runs more internal
+    waves and takes proportionally longer on a smaller machine. 128 was
+    chosen because it exceeds the core count of every machine on the IoA
+    cluster (14 machines, 24-112 cores each; `cap005a` is the largest at
+    112 — see `grid_sweep_cluster_howto.md`), so no batch ever idles cores
+    no matter which of the 14 machines runs it. Don't shrink batch size
+    below the largest machine's core count without re-checking this
+    reasoning.
+  - The batches exactly partition the full grid — every batch's `output`
+    folder name is unique and the union of all 8 batches' grid points
+    equals the full grid with zero overlap (verified programmatically when
+    the batches were created/re-split). If the full sweep definition, the
+    batch size, or the cluster's machine specs ever change, regenerate the
+    batch files from scratch rather than hand-editing them independently,
+    to keep the partition exact and the sizing reasoning valid.
 - `paper/` — MNRAS-format LaTeX source for the resulting paper (`main.tex`,
   `references.bib`, `mnras.cls`/`mnras.bst`, `Figures/`). It currently
   contains the predecessor paper (`calder_2026`) as a starting template/style
