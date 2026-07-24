@@ -1,7 +1,9 @@
 # How to launch a PROTEUS grid sweep on the IoA cluster
 
-Not tracked by git (matches the `nogit*` pattern in `.gitignore`). Written for
-future agents/sessions so the steps below don't need to be re-discovered.
+Tracked in git like any other project doc (despite an earlier version of
+this line claiming otherwise — it does not match any `nogit*`/gitignored
+pattern, confirmed via `git ls-files`). Written for future agents/sessions
+so the steps below don't need to be re-discovered.
 
 ## Facts that hold for every machine in this cluster
 
@@ -266,6 +268,182 @@ every command below instead.
    ```
    or `ssh <machine>` then `tmux attach -t <session_name>` interactively
    (and `Ctrl-b d` to detach again).
+
+## Planned launch: batches 03-16 (drafted 2026-07-24 for a Monday 2026-07-27 launch)
+
+Machine survey done 2026-07-24 (fresh `uptime` + `pgrep -af 'proteus start'`
+over SSH against all 14 known machines, not the stale 2026-07-22 table
+above): `cap001a`/`cap001b` are busy with the still-running batch01/batch02
+test; every other machine was idle **except `cap004a`**, which was running
+~40 of a different user's (`hen28`) own `proteus start` processes
+(`l9859c_grid4`, `/data/hen28/Projects/PROTEUS/...`) at check time. That's a
+snapshot, not a standing reservation — **do not assume `cap004a` is still
+busy Monday**; it's scheduled below for batch15 same as any other machine,
+gated on the same live re-check as everyone else immediately before
+launching (step 0 in each command block). If it's still running someone
+else's job at that point, skip it and leave batch15 unlaunched rather than
+launching alongside their work. `cap005a` was idle (its earlier
+`extremity_sweep_calliope` job, noted below as deliberately killed
+2026-07-22, is long gone) — confirmed 112 cores via `nproc`, so it takes
+two 64-point batches concurrently in separate tmux sessions per the
+accepted trade-off in `CLAUDE.md` (128 desired workers on 112 cores is
+mild, deliberate oversubscription, still far better than leaving another
+whole machine idle).
+
+That gives 13 launch slots for the 14 remaining batches (12 single-machine
+slots + cap005a doubling up, now +1 more for cap004a/batch15) — only
+batch16 has no assigned machine, waiting for cap001a/cap001b to finish.
+**Re-check load on all of these immediately before launching Monday** —
+this table is a snapshot, not a guarantee two-plus days out, and that cuts
+both ways: a machine idle today could be busy Monday, and vice versa.
+
+Pre-flight already done for all 14 (2026-07-24): every `output` name below
+was confirmed *not* to already exist under `/data/rdc49-2/PROTEUS/output/`,
+and the project's `k218b_fiducial.toml` was confirmed identical to the
+PROTEUS-side copy at `input/nogit_k218b_project/k218b_fiducial.toml` (see
+`CLAUDE.md`) — re-diff it again right before launching if any edits happen
+between now and Monday. Configs are used directly from this project's own
+checked-in path (no scratch copy under `input/nogit_grid_launch_configs/`
+needed — unlike batch01/02, these already have `symlink = ""` baked in and
+have no output-folder collision, so nothing needs renaming).
+
+| Machine | Cores | Batch | Session name |
+|---|---|---|---|
+| cap001c | 48 | batch03 | `proteus_batch03` |
+| cap001d | 48 | batch04 | `proteus_batch04` |
+| cap002b | 48 | batch05 | `proteus_batch05` |
+| cap002c | 48 | batch06 | `proteus_batch06` |
+| cap002d | 48 | batch07 | `proteus_batch07` |
+| cap003a | 48 | batch08 | `proteus_batch08` |
+| cap003b | 48 | batch09 | `proteus_batch09` |
+| cap003c | 48 | batch10 | `proteus_batch10` |
+| cap003d | 48 | batch11 | `proteus_batch11` |
+| cap004d | 48 | batch12 | `proteus_batch12` |
+| cap005a | 112 | batch13 **and** batch14 | `proteus_batch13`, `proteus_batch14` |
+| cap004a | 48 | batch15 | `proteus_batch15` (only if step 0 below shows it's actually free — see caveat above) |
+
+Not yet assigned a machine: **batch16** — launch once cap001a or cap001b
+frees up (batch01/batch02 finishing).
+
+### Launch commands
+
+For each row above, substitute `<machine>`, `<session>`, and `<NN>`:
+
+```bash
+# 0. Re-check the machine isn't busy with someone else's work
+ssh <machine> "uptime; ps aux --sort=-%cpu | head -20"
+
+# 1. (Optional but recommended) dry-run first
+ssh -t <machine> "bash -i -c 'conda activate proteus && nice -n 19 proteus grid -c /data/rdc49-2/K218b_project/grid_sweep_configs/batch_configs/batch<NN>.toml --dry-run'"
+# then, since the dry-run writes real per-case TOMLs under output/<name>/cfgs/:
+rm -rf /data/rdc49-2/PROTEUS/output/k218b_project_main_parameter_sweep_batch<NN>
+
+# 2. Real launch, detached tmux session
+ssh <machine> "tmux new-session -d -s <session> -c /data/rdc49-2/PROTEUS \
+  && tmux send-keys -t <session> 'module load netcdf/4-2025.01' C-m \
+  && sleep 2 \
+  && tmux send-keys -t <session> 'cd PROTEUS' C-m \
+  && sleep 1 \
+  && tmux send-keys -t <session> 'conda activate proteus' C-m \
+  && sleep 3 \
+  && tmux send-keys -t <session> 'nice -n 19 proteus grid -c /data/rdc49-2/K218b_project/grid_sweep_configs/batch_configs/batch<NN>.toml' C-m"
+
+# 3. Confirm it's really running (not stuck, not an accidental second dry-run)
+ssh <machine> "tmux capture-pane -t <session> -p | tail -20"
+```
+
+Concretely, the 12 real-launch commands (step 2 only; repeat steps 0/1/3 per
+machine the same way):
+
+```bash
+ssh cap001c "tmux new-session -d -s proteus_batch03 -c /data/rdc49-2/PROTEUS \
+  && tmux send-keys -t proteus_batch03 'module load netcdf/4-2025.01' C-m && sleep 2 \
+  && tmux send-keys -t proteus_batch03 'cd PROTEUS' C-m && sleep 1 \
+  && tmux send-keys -t proteus_batch03 'conda activate proteus' C-m && sleep 3 \
+  && tmux send-keys -t proteus_batch03 'nice -n 19 proteus grid -c /data/rdc49-2/K218b_project/grid_sweep_configs/batch_configs/batch03.toml' C-m"
+
+ssh cap001d "tmux new-session -d -s proteus_batch04 -c /data/rdc49-2/PROTEUS \
+  && tmux send-keys -t proteus_batch04 'module load netcdf/4-2025.01' C-m && sleep 2 \
+  && tmux send-keys -t proteus_batch04 'cd PROTEUS' C-m && sleep 1 \
+  && tmux send-keys -t proteus_batch04 'conda activate proteus' C-m && sleep 3 \
+  && tmux send-keys -t proteus_batch04 'nice -n 19 proteus grid -c /data/rdc49-2/K218b_project/grid_sweep_configs/batch_configs/batch04.toml' C-m"
+
+ssh cap002b "tmux new-session -d -s proteus_batch05 -c /data/rdc49-2/PROTEUS \
+  && tmux send-keys -t proteus_batch05 'module load netcdf/4-2025.01' C-m && sleep 2 \
+  && tmux send-keys -t proteus_batch05 'cd PROTEUS' C-m && sleep 1 \
+  && tmux send-keys -t proteus_batch05 'conda activate proteus' C-m && sleep 3 \
+  && tmux send-keys -t proteus_batch05 'nice -n 19 proteus grid -c /data/rdc49-2/K218b_project/grid_sweep_configs/batch_configs/batch05.toml' C-m"
+
+ssh cap002c "tmux new-session -d -s proteus_batch06 -c /data/rdc49-2/PROTEUS \
+  && tmux send-keys -t proteus_batch06 'module load netcdf/4-2025.01' C-m && sleep 2 \
+  && tmux send-keys -t proteus_batch06 'cd PROTEUS' C-m && sleep 1 \
+  && tmux send-keys -t proteus_batch06 'conda activate proteus' C-m && sleep 3 \
+  && tmux send-keys -t proteus_batch06 'nice -n 19 proteus grid -c /data/rdc49-2/K218b_project/grid_sweep_configs/batch_configs/batch06.toml' C-m"
+
+ssh cap002d "tmux new-session -d -s proteus_batch07 -c /data/rdc49-2/PROTEUS \
+  && tmux send-keys -t proteus_batch07 'module load netcdf/4-2025.01' C-m && sleep 2 \
+  && tmux send-keys -t proteus_batch07 'cd PROTEUS' C-m && sleep 1 \
+  && tmux send-keys -t proteus_batch07 'conda activate proteus' C-m && sleep 3 \
+  && tmux send-keys -t proteus_batch07 'nice -n 19 proteus grid -c /data/rdc49-2/K218b_project/grid_sweep_configs/batch_configs/batch07.toml' C-m"
+
+ssh cap003a "tmux new-session -d -s proteus_batch08 -c /data/rdc49-2/PROTEUS \
+  && tmux send-keys -t proteus_batch08 'module load netcdf/4-2025.01' C-m && sleep 2 \
+  && tmux send-keys -t proteus_batch08 'cd PROTEUS' C-m && sleep 1 \
+  && tmux send-keys -t proteus_batch08 'conda activate proteus' C-m && sleep 3 \
+  && tmux send-keys -t proteus_batch08 'nice -n 19 proteus grid -c /data/rdc49-2/K218b_project/grid_sweep_configs/batch_configs/batch08.toml' C-m"
+
+ssh cap003b "tmux new-session -d -s proteus_batch09 -c /data/rdc49-2/PROTEUS \
+  && tmux send-keys -t proteus_batch09 'module load netcdf/4-2025.01' C-m && sleep 2 \
+  && tmux send-keys -t proteus_batch09 'cd PROTEUS' C-m && sleep 1 \
+  && tmux send-keys -t proteus_batch09 'conda activate proteus' C-m && sleep 3 \
+  && tmux send-keys -t proteus_batch09 'nice -n 19 proteus grid -c /data/rdc49-2/K218b_project/grid_sweep_configs/batch_configs/batch09.toml' C-m"
+
+ssh cap003c "tmux new-session -d -s proteus_batch10 -c /data/rdc49-2/PROTEUS \
+  && tmux send-keys -t proteus_batch10 'module load netcdf/4-2025.01' C-m && sleep 2 \
+  && tmux send-keys -t proteus_batch10 'cd PROTEUS' C-m && sleep 1 \
+  && tmux send-keys -t proteus_batch10 'conda activate proteus' C-m && sleep 3 \
+  && tmux send-keys -t proteus_batch10 'nice -n 19 proteus grid -c /data/rdc49-2/K218b_project/grid_sweep_configs/batch_configs/batch10.toml' C-m"
+
+ssh cap003d "tmux new-session -d -s proteus_batch11 -c /data/rdc49-2/PROTEUS \
+  && tmux send-keys -t proteus_batch11 'module load netcdf/4-2025.01' C-m && sleep 2 \
+  && tmux send-keys -t proteus_batch11 'cd PROTEUS' C-m && sleep 1 \
+  && tmux send-keys -t proteus_batch11 'conda activate proteus' C-m && sleep 3 \
+  && tmux send-keys -t proteus_batch11 'nice -n 19 proteus grid -c /data/rdc49-2/K218b_project/grid_sweep_configs/batch_configs/batch11.toml' C-m"
+
+ssh cap004d "tmux new-session -d -s proteus_batch12 -c /data/rdc49-2/PROTEUS \
+  && tmux send-keys -t proteus_batch12 'module load netcdf/4-2025.01' C-m && sleep 2 \
+  && tmux send-keys -t proteus_batch12 'cd PROTEUS' C-m && sleep 1 \
+  && tmux send-keys -t proteus_batch12 'conda activate proteus' C-m && sleep 3 \
+  && tmux send-keys -t proteus_batch12 'nice -n 19 proteus grid -c /data/rdc49-2/K218b_project/grid_sweep_configs/batch_configs/batch12.toml' C-m"
+
+# cap005a takes TWO batches concurrently, in separate tmux sessions
+ssh cap005a "tmux new-session -d -s proteus_batch13 -c /data/rdc49-2/PROTEUS \
+  && tmux send-keys -t proteus_batch13 'module load netcdf/4-2025.01' C-m && sleep 2 \
+  && tmux send-keys -t proteus_batch13 'cd PROTEUS' C-m && sleep 1 \
+  && tmux send-keys -t proteus_batch13 'conda activate proteus' C-m && sleep 3 \
+  && tmux send-keys -t proteus_batch13 'nice -n 19 proteus grid -c /data/rdc49-2/K218b_project/grid_sweep_configs/batch_configs/batch13.toml' C-m"
+
+ssh cap005a "tmux new-session -d -s proteus_batch14 -c /data/rdc49-2/PROTEUS \
+  && tmux send-keys -t proteus_batch14 'module load netcdf/4-2025.01' C-m && sleep 2 \
+  && tmux send-keys -t proteus_batch14 'cd PROTEUS' C-m && sleep 1 \
+  && tmux send-keys -t proteus_batch14 'conda activate proteus' C-m && sleep 3 \
+  && tmux send-keys -t proteus_batch14 'nice -n 19 proteus grid -c /data/rdc49-2/K218b_project/grid_sweep_configs/batch_configs/batch14.toml' C-m"
+
+# cap004a -- ONLY if step 0 (uptime + ps/pgrep check) confirms it's actually
+# free Monday; it was running a different user's (hen28) own sweep when
+# surveyed 2026-07-24, but that's not to be assumed still true -- re-check
+# for real, live, unrelated processes before running this one.
+ssh cap004a "tmux new-session -d -s proteus_batch15 -c /data/rdc49-2/PROTEUS \
+  && tmux send-keys -t proteus_batch15 'module load netcdf/4-2025.01' C-m && sleep 2 \
+  && tmux send-keys -t proteus_batch15 'cd PROTEUS' C-m && sleep 1 \
+  && tmux send-keys -t proteus_batch15 'conda activate proteus' C-m && sleep 3 \
+  && tmux send-keys -t proteus_batch15 'nice -n 19 proteus grid -c /data/rdc49-2/K218b_project/grid_sweep_configs/batch_configs/batch15.toml' C-m"
+```
+
+After launching, move each entry from this section into "Currently running
+sweeps" below (machine, session, config path, output name, launch date,
+thread count actually observed), and re-run the load survey for
+`cap001a`/`cap001b` periodically to find a home for batch16.
 
 ## Currently running sweeps (update as sweeps finish / new ones launch)
 
