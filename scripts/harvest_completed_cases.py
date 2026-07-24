@@ -45,15 +45,34 @@ is printed under "STATUS-FILE DISAGREEMENTS" in the summary every run.
 
 The specific helpers reused from analyze_grid_sweep.py are: read_status,
 extract_last_loop, extract_exception, match_known_signature,
-status_disagreement, CATEGORY_LABELS, get_pgrep_lines, STALE_LOG_SECS. Its
-own aliveness check (bare `case_NNNNNN` pgrep matching) is NOT reused
-as-is: it is only safe within a single sweep, but here every batch restarts
-its own case numbering from 0, so a bare case-number match could find a
-*different* batch's live process by coincidence. This script instead
-requires both the batch's own `output` name AND the case number in the
-same process command line (matching PROTEUS's own
-<output>/cfgs/<case>.toml config-path convention), falling back to the same
-log-mtime-freshness heuristic otherwise.
+status_disagreement, CATEGORY_LABELS, format_age. Its own aliveness check
+(bare `case_NNNNNN` pgrep matching, run locally) is NOT reused: besides
+being unsafe across batches (every batch here restarts case numbering from
+0, so a bare case-number match could hit a *different* batch's live
+process), it is fundamentally broken for this script's actual usage
+pattern, confirmed by a real two-day test (2026-07-22 to 2026-07-24, see
+CLAUDE.md "Aliveness-check bug found during the first real test"): this
+script is normally run from a machine (e.g. the host running cron) that is
+NOT one of the 14 cluster machines actually executing a batch, so a local
+`pgrep` never finds the real process no matter how alive it is. That left
+the 15-minute log-mtime-staleness heuristic as the *only* effective
+signal -- and it's too short: the final observe/petitRADTRANS
+synthetic-spectrum step can legitimately run for hours without writing a
+new line to `proteus_00.log`. Over the test, 14 of 90 harvested cases
+(~16%) were still genuinely alive when harvested (confirmed by their logs
+continuing to grow for 48 minutes to 2.6 hours *after* being moved), and at
+least one (case_000027) subsequently crashed because its own directory had
+been pulled out from under it mid-run.
+
+The fix: query real process liveness over SSH against the actual cluster
+machines (`MACHINES` below, matching grid_sweep_cluster_howto.md), once per
+run rather than once per case, and use log-mtime-freshness only as a short
+grace-period fallback (`FALLBACK_ALIVE_LOG_FRESHNESS_SECS`, much shorter
+than before) for the rare case a machine can't be reached. This requires
+recognising a case's own `output` name AND case number in the same
+`pgrep -af 'proteus start'` line (matching PROTEUS's own
+`<output>/cfgs/<case>.toml` config-path convention), same as before -- just
+checked on the real machines instead of the local one.
 
 Harvested categories: success, crash (main loop or observe step), and
 dead/killed-externally-with-a-log are all terminal -- moved out either way,
@@ -102,6 +121,7 @@ import argparse
 import math
 import re
 import shutil
+import subprocess
 import sys
 import time
 import tomllib
@@ -123,6 +143,25 @@ DEFAULT_BATCH_CONFIGS = PROJECT_ROOT / "grid_sweep_configs" / "batch_configs"
 DEFAULT_RAW_GRID_OUTPUT = PROJECT_ROOT / "raw_grid_output"
 DEFAULT_PROTEUS_OUTPUT = Path("/data/rdc49-2/PROTEUS/output")
 DEFAULT_SIMULATION_DATA = PROJECT_ROOT / "simulation_data"
+
+# The 14 IoA cluster machines confirmed reachable, per
+# grid_sweep_cluster_howto.md "Choosing a machine". Update both places if
+# this list ever changes.
+DEFAULT_MACHINES = (
+    "cap001a", "cap001b", "cap001c", "cap001d",
+    "cap002b", "cap002c", "cap002d",
+    "cap003a", "cap003b", "cap003c", "cap003d",
+    "cap004a", "cap004d",
+    "cap005a",
+)
+DEFAULT_SSH_TIMEOUT = 6  # seconds; matches the ConnectTimeout used elsewhere in this project
+
+# Grace-period fallback only -- used when a machine can't be reached over
+# SSH (rare) or for the brief window right as a process starts. The real
+# aliveness signal is the SSH process check; this is deliberately much
+# shorter than the old (broken) 15-minute heuristic it replaces, since it's
+# no longer doing the primary work.
+FALLBACK_ALIVE_LOG_FRESHNESS_SECS = 5 * 60
 
 # Order matches the axes present in every batch/full-sweep config.
 AXES = {
@@ -235,33 +274,80 @@ def grid_position_name(
 
 
 # --------------------------------------------------------------------------
-# Cross-batch-safe log/status cross-checking (adapted from analyze_grid_sweep.py)
+# Cross-batch-safe, cross-machine-safe log/status cross-checking
+# (adapted from analyze_grid_sweep.py)
 # --------------------------------------------------------------------------
 
 
-def case_alive_in_batch(case_name: str, batch_output_name: str, mtime: float, now: float) -> bool:
+def query_live_process_lines(
+    machines: tuple[str, ...], ssh_timeout: float
+) -> tuple[list[str], list[str]]:
+    """Fetch `pgrep -af 'proteus start'` output from every machine, once.
+
+    Returns (all matched lines across every reachable machine, list of
+    machines that could not be reached). Called once per run, not once per
+    case -- 14 SSH round-trips is fine for a script meant to run at most a
+    few times a day, but would be wasteful (and was, in the previous local-
+    pgrep design, ineffective) to repeat per case.
+
+    Exit code 255 from `ssh` itself (connection-level failure) is treated
+    as unreachable; exit code 1 from `pgrep` (successfully connected, found
+    no matching process) is a normal, expected result, not a failure.
+    """
+    lines: list[str] = []
+    unreachable: list[str] = []
+    for machine in machines:
+        try:
+            result = subprocess.run(
+                [
+                    "ssh",
+                    "-o", f"ConnectTimeout={ssh_timeout}",
+                    "-o", "BatchMode=yes",
+                    machine,
+                    "pgrep -af 'proteus start'",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=ssh_timeout + 5,
+            )
+        except subprocess.TimeoutExpired:
+            unreachable.append(machine)
+            continue
+        if result.returncode == 255:
+            unreachable.append(machine)
+            continue
+        lines.extend(line for line in result.stdout.splitlines() if line.strip())
+    return lines, unreachable
+
+
+def case_alive_in_batch(
+    case_name: str, batch_output_name: str, live_lines: list[str], mtime: float, now: float
+) -> bool:
     """Is this specific batch's case still actually running?
 
-    Unlike analyze_grid_sweep.case_is_alive (bare `case_NNNNNN` pgrep
-    match -- correct within a single sweep, but every batch here restarts
-    numbering from 0, so a bare match could hit a different batch's live
-    process), this requires both the batch's own output name and the case
-    number in the same process command line, matching PROTEUS's own
-    <output>/cfgs/<case>.toml config-path convention. Falls back to the
-    same log-mtime-freshness heuristic as analyze_grid_sweep otherwise,
-    which needs no such disambiguation (it's specific to this exact
-    case_dir's own log file already).
+    Primary signal: does any line from `query_live_process_lines` (gathered
+    once per run, across all real cluster machines) mention both this
+    batch's output name and this case's number? That combination matches
+    PROTEUS's own <output>/cfgs/<case>.toml config-path convention and
+    disambiguates between batches, which all restart case numbering from 0.
+
+    Fallback (only reached if not found live above): a short log-mtime-
+    freshness grace period, for a machine that couldn't be reached or a
+    process that only just started. This is NOT the primary signal (see
+    module docstring for why the previous design, which made it the only
+    signal, caused real problems).
     """
-    for line in ag.get_pgrep_lines("proteus start"):
+    for line in live_lines:
         if batch_output_name in line and case_name in line:
             return True
-    return (now - mtime) < ag.STALE_LOG_SECS
+    return (now - mtime) < FALLBACK_ALIVE_LOG_FRESHNESS_SECS
 
 
 def determine_real_outcome(
-    case_dir: Path, batch_output_name: str, now: float
+    case_dir: Path, batch_output_name: str, live_lines: list[str], now: float
 ) -> tuple[int, str, str | None, tuple[str, str] | None]:
-    """Mirror analyze_grid_sweep.analyze_case's categorisation, cross-batch-safe.
+    """Mirror analyze_grid_sweep.analyze_case's categorisation, cross-batch-
+    and cross-machine-safe.
 
     Returns (category, outcome_description, failure_signature_or_None, status).
     `status` is the raw (code, label) tuple from the status file, or None.
@@ -275,7 +361,7 @@ def determine_real_outcome(
 
     text = log_path.read_text(errors="replace")
     mtime = log_path.stat().st_mtime
-    alive = case_alive_in_batch(case_dir.name, batch_output_name, mtime, now)
+    alive = case_alive_in_batch(case_dir.name, batch_output_name, live_lines, mtime, now)
 
     tb_positions = [m.start() for m in re.finditer("Traceback", text)]
     if tb_positions:
@@ -363,10 +449,23 @@ def print_summary(
 
 
 def scan_batches(
-    batches: list[tuple[str, str, Path]], now: float
+    batches: list[tuple[str, str, Path]],
+    now: float,
+    machines: tuple[str, ...] = DEFAULT_MACHINES,
+    ssh_timeout: float = DEFAULT_SSH_TIMEOUT,
 ) -> tuple[dict[str, Counter], list[tuple[str, str, str]], dict[str, list[tuple[Path, int, str, str | None]]]]:
     """Classify every case in every batch. Returns (category tallies per batch,
     status disagreements, {batch_name: [(case_dir, category, outcome, signature), ...]})."""
+    live_lines, unreachable = query_live_process_lines(machines, ssh_timeout)
+    if unreachable:
+        print(
+            f"warning: could not reach {len(unreachable)} machine(s) via SSH to check for "
+            f"live processes: {', '.join(unreachable)}. Any of their cases that look dead "
+            "are only confirmed via the short log-freshness fallback, not the primary "
+            "process check, for this run.",
+            file=sys.stderr,
+        )
+
     batch_categories: dict[str, Counter] = {}
     disagreements: list[tuple[str, str, str]] = []
     batch_cases: dict[str, list[tuple[Path, int, str, str | None]]] = {}
@@ -383,7 +482,7 @@ def scan_batches(
         )
         for case_dir in case_dirs:
             category, outcome, signature, status = determine_real_outcome(
-                case_dir, output_name, now
+                case_dir, output_name, live_lines, now
             )
             counts[ag.CATEGORY_LABELS[category]] += 1
             batch_cases[batch_name].append((case_dir, category, outcome, signature))
@@ -400,9 +499,13 @@ def harvest(
     full_axes: dict[str, list[float]],
     dest_dir: Path,
     dry_run: bool,
+    machines: tuple[str, ...] = DEFAULT_MACHINES,
+    ssh_timeout: float = DEFAULT_SSH_TIMEOUT,
 ) -> tuple[dict[str, Counter], list[tuple[str, str, str]]]:
     now = time.time()
-    batch_categories, disagreements, batch_cases = scan_batches(batches, now)
+    batch_categories, disagreements, batch_cases = scan_batches(
+        batches, now, machines, ssh_timeout
+    )
 
     for batch_name, cases in batch_cases.items():
         for case_dir, category, outcome, signature in cases:
@@ -495,6 +598,19 @@ def main() -> int:
         metavar="SECONDS",
         help="Re-run in a loop every SECONDS instead of once",
     )
+    parser.add_argument(
+        "--machines",
+        type=lambda s: tuple(m.strip() for m in s.split(",") if m.strip()),
+        default=DEFAULT_MACHINES,
+        help="Comma-separated cluster machines to check for live processes via SSH "
+        f"(default: all {len(DEFAULT_MACHINES)} known machines, see grid_sweep_cluster_howto.md)",
+    )
+    parser.add_argument(
+        "--ssh-timeout",
+        type=float,
+        default=DEFAULT_SSH_TIMEOUT,
+        help=f"SSH connect timeout in seconds per machine (default: {DEFAULT_SSH_TIMEOUT})",
+    )
     args = parser.parse_args()
 
     # Line-buffer stdout/stderr regardless of invocation context. When this
@@ -526,9 +642,13 @@ def main() -> int:
         print(f"=== harvest_completed_cases.py run started {datetime.now().isoformat(timespec='seconds')} ===")
         try:
             if args.summary_only:
-                categories, disagreements, _ = scan_batches(batches, time.time())
+                categories, disagreements, _ = scan_batches(
+                    batches, time.time(), args.machines, args.ssh_timeout
+                )
             else:
-                categories, disagreements = harvest(batches, full_axes, args.dest, args.dry_run)
+                categories, disagreements = harvest(
+                    batches, full_axes, args.dest, args.dry_run, args.machines, args.ssh_timeout
+                )
             print_summary(categories, disagreements)
         except Exception:
             print(

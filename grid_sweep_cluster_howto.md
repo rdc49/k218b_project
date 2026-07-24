@@ -269,8 +269,32 @@ every command below instead.
 
 ## Currently running sweeps (update as sweeps finish / new ones launch)
 
-Nothing currently running as of 2026-07-22 (both entries below killed
-deliberately). Both `cap003d` and `cap005a` are free.
+- `cap001a`, tmux session `proteus_batch01`:
+  `nice -n 19 proteus grid -c /data/rdc49-2/PROTEUS/input/nogit_grid_launch_configs/batch01_nosymlink.toml`
+  (64-case grid, output `k218b_project_main_parameter_sweep_batch01/`, real
+  data under `/data/rdc49-2/PROTEUS/output/` directly — see the symlink bug
+  note above), launched 2026-07-22 as a first test of the batch/harvesting
+  system on just 2 of the 14 machines before launching the rest. 24 threads
+  (matches cap001a's 24 cores). Check `harvest_completed_cases.py
+  --summary-only` or `tmux capture-pane -t proteus_batch01 -p | tail -20`
+  for progress.
+- `cap001b`, tmux session `proteus_batch02`:
+  `nice -n 19 proteus grid -c /data/rdc49-2/PROTEUS/input/nogit_grid_launch_configs/batch02_nosymlink.toml`
+  (64-case grid, output `k218b_project_main_parameter_sweep_batch02/`, same
+  real-data location note as above), launched 2026-07-22 alongside batch01
+  for the same test. 48 threads (matches cap001b's 48 cores).
+
+The two scratch launch configs above (`batch01_nosymlink.toml`,
+`batch02_nosymlink.toml`, under
+`/data/rdc49-2/PROTEUS/input/nogit_grid_launch_configs/`) are copies of the
+checked-in `grid_sweep_configs/batch_configs/batch01.toml`/`batch02.toml`
+with `symlink` blanked — created before the checked-in configs themselves
+were updated to also blank `symlink` (see the bug note above). They're
+functionally identical to the checked-in configs now; either works if
+relaunching, but the checked-in ones are the ones that stay in sync with
+the rest of this project.
+
+Previously running, now stopped:
 
 - `cap003d`, tmux session `proteus_grid_extremety_sweep`:
   `proteus grid -c input/nogit_ensembles/K218b_project/extremety_sweep_atmodeller.toml`

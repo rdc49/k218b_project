@@ -16,14 +16,18 @@
 # leaving it under-filled. See grid_sweep_cluster_howto.md for the
 # per-machine core counts and CLAUDE.md for the full reasoning.
 #
-# `symlink` points PROTEUS at raw_grid_output/ in this project so the
-# real data is written directly here (NFS-shared across the cluster),
-# rather than under PROTEUS/output/, which becomes just a symlink to it.
-# Move a completed run into simulation_data/ with scripts/move_sweep.py
+# `symlink` is intentionally left blank (disabled) rather than pointing at
+# raw_grid_output/ as originally designed: PROTEUS's Grid.__init__ (manage.py
+# ~line 158) calls os.symlink(symlink_dir, self.outdir) where self.outdir always
+# has a trailing slash, which os.symlink rejects with FileNotFoundError whenever
+# the link doesn't already exist -- confirmed via a real launch attempt on
+# 2026-07-22, not specific to this batch or machine. Until that's fixed upstream,
+# real data lands directly under PROTEUS/output/<name>/ (the pre-raw_grid_output
+# layout); move a completed run into simulation_data/ with scripts/move_sweep.py
 # once checked over -- see CLAUDE.md.
 
 output = "k218b_project_main_parameter_sweep_batch03/"
-symlink = "/data/rdc49-2/K218b_project/raw_grid_output/k218b_project_main_parameter_sweep_batch03"
+symlink = ""
 
 ref_config = "input/nogit_k218b_project/k218b_fiducial.toml"
 

@@ -341,36 +341,63 @@ automatically by the PROTEUS pipeline (no separate `observe`/`offchem` call
 needed) and are written into that same per-run output subdirectory alongside
 the physical output.
 
-### Where sweep output actually lands: `raw_grid_output/`
+### Where sweep output actually lands: `raw_grid_output/` (currently disabled — see bug below)
 
-Every `grid_sweep_configs/batch_configs/batch*.toml` sets `symlink` to an
-absolute path under `raw_grid_output/` in this project (e.g.
+**Current reality (as of 2026-07-22): every batch config's `symlink` field
+is blank, and every sweep — including `batch01`/`batch02`, first launched
+on `cap001a`/`cap001b` this date — writes directly under
+`/data/rdc49-2/PROTEUS/output/<name>/`, the pre-`raw_grid_output/` layout.**
+`scripts/move_sweep.py` and `scripts/harvest_completed_cases.py` both
+already handle this layout correctly (it's their fallback path, exercised
+automatically whenever a batch's `symlink` is blank) — nothing extra is
+needed to work with sweeps launched this way.
+
+**The original design** (kept here so it can be re-enabled once fixed):
+set `symlink` to an absolute path under `raw_grid_output/` in this project
+(e.g.
 `/data/rdc49-2/K218b_project/raw_grid_output/k218b_project_main_parameter_sweep_batch01`).
 PROTEUS's grid runner (`Grid.__init__` in
 `PROTEUS/src/proteus/grid/manage.py:100-158`) always anchors a sweep's name
-at `PROTEUS/output/<name>/`, but when `symlink` is set it creates the *real*
-directory at that path instead and leaves only a symlink at
-`PROTEUS/output/<name>/` pointing to it. So for every sweep launched with
-these batch configs, the actual data is written directly into this
-project's `raw_grid_output/` — on the same NFS-shared filesystem
-(`/data/rdc49-2/`) from any of the 14 cluster machines — with
-`PROTEUS/output/<name>` acting as nothing more than a pointer to it.
+at `PROTEUS/output/<name>/`, but when `symlink` is set it's supposed to
+create the *real* directory at that path instead and leave only a symlink
+at `PROTEUS/output/<name>/` pointing to it, so the actual data would be
+written directly into this project's `raw_grid_output/` — on the same
+NFS-shared filesystem (`/data/rdc49-2/`) from any of the 14 cluster
+machines — with `PROTEUS/output/<name>` acting as nothing more than a
+pointer to it.
 
-**Why not symlink straight into `simulation_data/`?** Because
-`simulation_data/` is meant to hold only sweeps that have been checked over
-(see below) — writing there directly would remove that review step. It's
-also risky: `Grid.__init__` `rmtree`s the symlink target if it already
-exists (lines ~146-156, no confirmation, only refused if it contains
-`.git`), so relaunching a batch under a reused name onto an
-already-reviewed `simulation_data/` folder would silently wipe it.
-`raw_grid_output/` keeps that blast radius contained to not-yet-reviewed
-output.
+**Why it's disabled: a real PROTEUS bug, confirmed via an actual launch
+attempt, not a config mistake.** `Grid.__init__` always constructs
+`self.outdir` with a trailing slash (`PROTEUS_DIR + '/output/' + name +
+'/'`, manage.py:109/119) and passes it straight to `os.symlink(symlink_dir,
+self.outdir)` at line 158. `os.symlink()` rejects a link path with a
+trailing slash whenever the link doesn't already exist
+(`FileNotFoundError`), which is always true the first time a sweep is
+launched. Reproduced in isolation with a plain Python script, and via a
+real `proteus grid -c ... --dry-run` attempt on `cap001a` on 2026-07-22,
+both failing identically. This affects *any* config that sets `symlink`,
+on any machine — not specific to a particular batch. The workaround used
+for the first real launch was a scratch copy of the batch config with
+`symlink = ""` under `PROTEUS/input/nogit_grid_launch_configs/` (per the
+"avoid clobbering" pre-flight procedure in `grid_sweep_cluster_howto.md`);
+the checked-in batch configs were then updated to match (`symlink = ""`
+everywhere) so `harvest_completed_cases.py`'s default discovery — which
+reads the checked-in configs, not any scratch copy — correctly finds where
+the data really is.
 
-**Caveat**: this only applies to sweeps launched via the batch configs in
-this project. Older sweeps launched before this scheme existed (or any
-future config that doesn't set `symlink`) still write directly under
+**To re-enable `raw_grid_output/` once the upstream bug is fixed**: patch
+`Grid.__init__` to strip the trailing slash before the `os.symlink` call
+(e.g. `os.symlink(self.symlink_dir, self.outdir.rstrip('/'))`), verify with
+a throwaway config, then set `symlink` back to the intended
+`raw_grid_output/<output_name>` path in each batch config. Nothing else
+needs to change — `move_sweep.py` and `harvest_completed_cases.py` already
+support both layouts and pick the right one automatically per batch.
+
+**Caveat regardless of which layout is active**: this only concerns sweeps
+launched via the batch configs in this project. Older sweeps launched
+before either scheme existed also write directly under
 `/data/rdc49-2/PROTEUS/output/<name>/` with no symlink involved —
-`scripts/move_sweep.py` (below) handles both cases automatically.
+handled by the same fallback path.
 
 ### Moving a completed sweep into `simulation_data/`
 
@@ -472,28 +499,65 @@ simulation. Every run also prints a "STATUS-FILE DISAGREEMENTS" section
 flagging any case where the on-disk `status` doesn't match the log-derived
 outcome, whether or not that case got harvested.
 
-One piece of `analyze_grid_sweep.py`'s own logic is *not* reused as-is:
-its liveness check matches a bare `case_NNNNNN` against `pgrep -af
-"proteus start"`, which is only safe within a single sweep — here, every
-batch restarts its own case numbering from 0, so two different batches
-running concurrently would both have a "case_000005", and a bare-number
-match could pick up the *wrong* batch's live process. This script's own
-liveness check instead requires both the batch's `output` name and the
-case number to appear in the same process command line (matching
-PROTEUS's own `<output>/cfgs/<case>.toml` config-path convention), falling
-back to the same log-mtime-freshness heuristic otherwise. In practice this
-`pgrep` signal rarely fires anyway, since this script is typically
-invoked from a different machine than whichever of the 14 cluster nodes is
-actually running a given batch — the mtime-freshness fallback (which
-works fine across machines via the shared NFS filesystem) is doing most of
-the real work.
+**Liveness is checked via real SSH process queries against the actual
+cluster machines, not a local `pgrep` or log-mtime guess** (see below for
+why this replaced an earlier, broken design). Once per run (not once per
+case), it runs `pgrep -af 'proteus start'` over SSH against every machine
+in `DEFAULT_MACHINES` (the 14 known cluster machines, matching
+`grid_sweep_cluster_howto.md` — override with `--machines` for a faster,
+scoped check, e.g. `--machines cap001a,cap001b`), and a case counts as
+alive if any returned line mentions both its batch's `output` name and its
+case number (matching PROTEUS's own `<output>/cfgs/<case>.toml`
+config-path convention — needed because every batch restarts case
+numbering from 0, so a bare case-number match could hit a different
+batch's process). A short log-mtime-freshness grace period
+(`FALLBACK_ALIVE_LOG_FRESHNESS_SECS`, 5 minutes) is only a fallback, used
+when a machine can't be reached over SSH — if any can't be reached, a
+warning names them so you know which cases' "dead" classifications that
+run are less certain.
 
 ```bash
 python3 scripts/harvest_completed_cases.py                # summary + harvest
 python3 scripts/harvest_completed_cases.py --summary-only  # just the summary
 python3 scripts/harvest_completed_cases.py --dry-run        # preview harvesting
 python3 scripts/harvest_completed_cases.py --watch 300       # repeat every 5 min
+python3 scripts/harvest_completed_cases.py --machines cap001a,cap001b  # scope the SSH check
 ```
+
+#### Aliveness-check bug found during the first real test (2026-07-22 to 2026-07-24)
+
+The very first real test of this script (batches 01/02 launched on
+`cap001a`/`cap001b`) surfaced a genuine, confirmed bug in its original
+liveness check, not a hypothetical concern: that check matched a bare
+`case_NNNNNN` against `pgrep -af 'proteus start'` run **locally** (i.e. on
+whichever machine invokes the script — here, the cron host, `calx034`,
+which is not one of the 14 cluster machines), falling back to a 15-minute
+log-mtime-staleness heuristic (`analyze_grid_sweep.STALE_LOG_SECS`,
+inherited unmodified) if that found nothing. Since the script never runs on
+the same host as the actual simulations, the `pgrep` signal never once
+fired — the 15-minute heuristic was doing 100% of the "is it dead" work,
+silently.
+
+That heuristic was too aggressive: the final observe/petitRADTRANS
+synthetic-spectrum step can legitimately run for hours without writing a
+new line to `proteus_00.log`. Over the two-day test, checked directly by
+comparing each harvested case's log/status timestamps against when it was
+actually harvested: **14 of 90 harvested cases (~16%) were still genuinely
+alive when harvested** — their logs kept growing for 48 minutes to 2.6
+hours *after* being moved. At least one (`case_000027`) subsequently
+crashed with `FileNotFoundError: No stellar spectrum files ... found in
+'.../data'` — its own data directory had been pulled out from under it
+mid-run by the premature harvest. (Every `1_success` and every crash-typed
+harvest was independently verified as genuinely correct — the bug was
+isolated to the `6_unclassified` "killed externally" category.)
+
+Fixed by replacing the liveness check entirely with real SSH process
+queries against the actual cluster machines (described above), gathered
+once per run rather than once per case. The cron job was paused
+(commented out, not deleted — see below) the moment this was found, and
+only re-enabled once this fix was tested against the live batch01/batch02
+processes and confirmed to match a direct `ps` check on both machines
+exactly.
 
 **Renaming**: a harvested case is renamed from its batch-local
 `case_NNNNNN` to
@@ -538,7 +602,15 @@ fully drained is fine if you want to tidy it up.
 
 `harvest_completed_cases.py` runs automatically every day at 07:00 (all
 7 days), via this machine's user crontab (`crontab -l` to view,
-`crontab -e` to edit):
+`crontab -e` to edit). **It was paused (line commented out, not deleted)
+from 2026-07-24 while the aliveness-check bug above was found and fixed,
+then re-enabled the same day once the fix was verified against the live
+batch01/batch02 processes.** If you ever need to pause it again (e.g.
+while changing this script), comment the line out with a `#` prefix plus a
+dated reason rather than deleting it, so it's easy to tell it was
+deliberate and easy to restore — and always re-check the first few lines
+of `crontab -l` against what they were before, to make sure the edit
+didn't touch the two unrelated pre-existing jobs (see below).
 
 ```cron
 0 7 * * * flock -n /tmp/k218b_harvest_cron.lock /data/rdc49-2/anaconda3/envs/proteus/bin/python3 /data/rdc49-2/K218b_project/scripts/harvest_completed_cases.py >> /data/rdc49-2/K218b_project/logs/harvest_cron.log 2>&1
