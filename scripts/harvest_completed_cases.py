@@ -143,6 +143,7 @@ DEFAULT_BATCH_CONFIGS = PROJECT_ROOT / "grid_sweep_configs" / "batch_configs"
 DEFAULT_RAW_GRID_OUTPUT = PROJECT_ROOT / "raw_grid_output"
 DEFAULT_PROTEUS_OUTPUT = Path("/data/rdc49-2/PROTEUS/output")
 DEFAULT_SIMULATION_DATA = PROJECT_ROOT / "simulation_data"
+DEFAULT_LOG_DIR = PROJECT_ROOT / "logs"
 
 # The 14 IoA cluster machines confirmed reachable, per
 # grid_sweep_cluster_howto.md "Choosing a machine". Update both places if
@@ -171,6 +172,20 @@ AXES = {
     "S": "planet.elements.S_budget",
     "fO2": "outgas.fO2_shift_IW",
 }
+
+# Human-readable description of each axis, for GRID_INDEX_LEGEND.txt (see
+# write_grid_index_legend below) -- units/meaning aren't derivable from the
+# TOML config alone, so these are spelled out here once.
+AXIS_DESCRIPTIONS = {
+    "H": "planet.elements.H_budget -- hydrogen budget [ppmw, H_mode='ppmw']",
+    "C": "planet.elements.C_budget -- carbon budget [C/H mass ratio, C_mode='C/H']",
+    "N": "planet.elements.N_budget -- nitrogen budget [N/H mass ratio, N_mode='N/H']",
+    "S": "planet.elements.S_budget -- sulphur budget [S/H mass ratio, S_mode='S/H']",
+    "fO2": "outgas.fO2_shift_IW -- mantle oxygen fugacity [log10 units relative to "
+    "the iron-wustite buffer]",
+}
+
+GRID_INDEX_LEGEND_NAME = "GRID_INDEX_LEGEND.txt"
 
 # Categories from analyze_grid_sweep.CATEGORY_LABELS that represent a
 # genuinely finished case, safe to move out of its batch.
@@ -212,6 +227,34 @@ def axis_values(cfg: dict, key: str) -> list[float]:
 def load_full_grid_axes(full_sweep_path: Path) -> dict[str, list[float]]:
     cfg = load_toml(full_sweep_path)
     return {short: axis_values(cfg, key) for short, key in AXES.items()}
+
+
+def write_grid_index_legend(dest_dir: Path, full_axes: dict[str, list[float]]) -> None:
+    """(Re)write simulation_data/GRID_INDEX_LEGEND.txt from the full-sweep config.
+
+    Regenerated on every run (summary-only/dry-run/real-harvest alike) so it
+    can never drift from full_parameter_sweep.toml; harmless to overwrite
+    since it's fully derived, not hand-edited.
+    """
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "# Grid index legend for simulation_data/ folder names",
+        "#",
+        "# Folder names encode each case's position in the full parameter sweep as",
+        "# grid_H<i>_C<i>_N<i>_S<i>_fO2<i>, where each <i> is an INDEX (0-3) into",
+        "# the axis value list below -- NOT the actual physical value itself.",
+        "# Regenerated automatically by scripts/harvest_completed_cases.py from",
+        "# grid_sweep_configs/full_parameter_sweep.toml every time it runs.",
+        "#",
+        f"# Generated: {datetime.now().isoformat(timespec='seconds')}",
+        "",
+    ]
+    for axis in AXES:
+        lines.append(f"{axis}  ({AXIS_DESCRIPTIONS[axis]}):")
+        for i, value in enumerate(full_axes[axis]):
+            lines.append(f"  {axis}{i} = {value!r}")
+        lines.append("")
+    (dest_dir / GRID_INDEX_LEGEND_NAME).write_text("\n".join(lines))
 
 
 def discover_batches(batch_configs_dir: Path, proteus_output: Path) -> list[tuple[str, str, Path]]:
@@ -552,6 +595,23 @@ def harvest(
     return batch_categories, disagreements
 
 
+class Tee:
+    """Write to multiple streams at once (e.g. the real stdout/stderr and a
+    dated log file), so cron's own redirect and this script's per-day log
+    both see the same output without either depending on the other."""
+
+    def __init__(self, *streams):
+        self.streams = streams
+
+    def write(self, data):
+        for s in self.streams:
+            s.write(data)
+
+    def flush(self):
+        for s in self.streams:
+            s.flush()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -611,6 +671,18 @@ def main() -> int:
         default=DEFAULT_SSH_TIMEOUT,
         help=f"SSH connect timeout in seconds per machine (default: {DEFAULT_SSH_TIMEOUT})",
     )
+    parser.add_argument(
+        "--log-dir",
+        type=Path,
+        default=DEFAULT_LOG_DIR,
+        help=f"Directory to write a per-day log file into, harvest_YYYY-MM-DD.log "
+        f"(default: {DEFAULT_LOG_DIR})",
+    )
+    parser.add_argument(
+        "--no-file-log",
+        action="store_true",
+        help="Don't write to a per-day log file; only print to stdout/stderr",
+    )
     args = parser.parse_args()
 
     # Line-buffer stdout/stderr regardless of invocation context. When this
@@ -622,7 +694,20 @@ def main() -> int:
     sys.stdout.reconfigure(line_buffering=True)
     sys.stderr.reconfigure(line_buffering=True)
 
+    # Each day's cron-triggered run gets its own log file (harvest_YYYY-MM-DD.log)
+    # rather than everything appending to one ever-growing file, so a given
+    # morning's run is easy to find and old ones can be pruned independently.
+    # Tee'd rather than redirected outright so stdout still shows output when
+    # run by hand from a terminal.
+    if not args.no_file_log:
+        args.log_dir.mkdir(parents=True, exist_ok=True)
+        log_path = args.log_dir / f"harvest_{datetime.now().strftime('%Y-%m-%d')}.log"
+        log_file = open(log_path, "a")
+        sys.stdout = Tee(sys.stdout, log_file)
+        sys.stderr = Tee(sys.stderr, log_file)
+
     full_axes = load_full_grid_axes(args.full_sweep)
+    write_grid_index_legend(args.dest, full_axes)
     batches = discover_batches(args.batch_configs, args.proteus_output)
     if not batches:
         print(f"error: no batch*.toml files found under {args.batch_configs}", file=sys.stderr)

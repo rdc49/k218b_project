@@ -1,0 +1,39 @@
+# Grid index legend for simulation_data/ folder names
+#
+# Folder names encode each case's position in the full parameter sweep as
+# grid_H<i>_C<i>_N<i>_S<i>_fO2<i>, where each <i> is an INDEX (0-3) into
+# the axis value list below -- NOT the actual physical value itself.
+# Regenerated automatically by scripts/harvest_completed_cases.py from
+# grid_sweep_configs/full_parameter_sweep.toml every time it runs.
+#
+# Generated: 2026-07-24T13:08:46
+
+H  (planet.elements.H_budget -- hydrogen budget [ppmw, H_mode='ppmw']):
+  H0 = 10000.0
+  H1 = 17099.75946676698
+  H2 = 29240.177382128637
+  H3 = 49999.99999999999
+
+C  (planet.elements.C_budget -- carbon budget [C/H mass ratio, C_mode='C/H']):
+  C0 = 0.0032
+  C1 = 0.032
+  C2 = 0.32
+  C3 = 3.2
+
+N  (planet.elements.N_budget -- nitrogen budget [N/H mass ratio, N_mode='N/H']):
+  N0 = 0.0009
+  N1 = 0.009
+  N2 = 0.09
+  N3 = 0.9
+
+S  (planet.elements.S_budget -- sulphur budget [S/H mass ratio, S_mode='S/H']):
+  S0 = 0.004
+  S1 = 0.04
+  S2 = 0.4
+  S3 = 4.0
+
+fO2  (outgas.fO2_shift_IW -- mantle oxygen fugacity [log10 units relative to the iron-wustite buffer]):
+  fO20 = -3.0
+  fO21 = -2.0
+  fO22 = -1.0
+  fO23 = 0.0

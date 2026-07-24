@@ -20,6 +20,10 @@ __pycache__/
 # Raw PROTEUS simulation output (large grid-sweep data; not tracked in git)
 simulation_data/*
 !simulation_data/.gitkeep
+# ...except the auto-generated legend explaining the grid_H<i>_C<i>_..._<i>
+# folder-name indices (scripts/harvest_completed_cases.py writes/refreshes
+# this every run) -- small, useful documentation, unlike the harvested data.
+!simulation_data/GRID_INDEX_LEGEND.txt
 
 # Staging area that batch grid configs' `symlink` field points PROTEUS at
 # directly (see grid_sweep_configs/batch_configs/); move a completed run
@@ -30,6 +34,11 @@ raw_grid_output/*
 # Runtime logs (e.g. the harvest_completed_cases.py cron job's log file)
 logs/*
 !logs/.gitkeep
+
+# Generated, timestamped gap-fill configs from scripts/generate_gapfill_configs.py
+# (regeneratable on demand; not meant to accumulate in git history)
+grid_sweep_configs/gapfill_configs/*
+!grid_sweep_configs/gapfill_configs/.gitkeep
 
 # OS cruft
 .DS_Store

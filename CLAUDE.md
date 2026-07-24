@@ -57,8 +57,11 @@ step — that is this project.
   finished cases out of still-running batches, renamed by grid position;
   cross-checks each case's log rather than trusting its on-disk `status`
   alone — see "Monitoring and harvesting while batches are still running"
-  below), and `analyze_grid_sweep.py` (a separate, pre-existing, more
-  thorough per-sweep analysis tool, not written by this assistant, whose
+  below), `generate_gapfill_configs.py` (regenerates single-point launch
+  configs for grid points killed mid-run, e.g. by the cluster's weekly
+  reset — see "Recovering interrupted grid points" below), and
+  `analyze_grid_sweep.py` (a separate, pre-existing, more thorough
+  per-sweep analysis tool, not written by this assistant, whose
   log-cross-checking approach `harvest_completed_cases.py` reuses/adapts —
   see its own docstring for the single-sweep-focused analysis and
   plot-collection features it has that `harvest_completed_cases.py`
@@ -576,6 +579,17 @@ kept for traceability and so failed vs. successful cases can be told apart
 (e.g. via `ls simulation_data | grep 1_success`) without reopening each
 case's log.
 
+**What the `<i>` indices actually mean**: `simulation_data/GRID_INDEX_LEGEND.txt`
+maps every axis's indices (0-3) to their real physical value, e.g. `H0 =
+10000.0`, `C1 = 0.032`, `fO23 = 0.0` — written/refreshed by
+`write_grid_index_legend()` on every single invocation (summary-only,
+dry-run, and real-harvest alike), straight from
+`grid_sweep_configs/full_parameter_sweep.toml`, so it can never drift out
+of sync with the actual sweep definition. It's the one file inside
+`simulation_data/` that's tracked in git despite the rest of that directory
+being gitignored (`!simulation_data/GRID_INDEX_LEGEND.txt` in `.gitignore`)
+— small, useful documentation, not harvested data.
+
 **Categories 4 and 5 (genuinely still running, whether or not `status`
 agrees) are never harvested, and neither is category 6 with no
 `proteus_00.log` at all** (ambiguous between never-started and
@@ -598,6 +612,86 @@ exists (now containing only `cfgs/`, `logs/`, `manager.log`, etc., no more
 `case_*` dirs) — harmless, but a manual `rm -r` once you're sure a batch is
 fully drained is fine if you want to tidy it up.
 
+### Recovering interrupted grid points: `scripts/generate_gapfill_configs.py`
+
+**Why this exists**: the IoA department cluster resets every Sunday at
+midnight, killing any jobs on any machine, cluster-wide. PROTEUS's own
+`max_days`/checkpointing (`max_days = 1` in every batch config) does
+nothing to protect against this — it only feeds a SLURM job-array script
+(`Grid.slurm_config`) that our configs never use (`use_slurm = false`
+everywhere; there is no Slurm on this cluster). The local-multiprocessing
+path we actually use (`Grid.run()`) has no wall-clock self-limit or
+checkpointing at all. A batch can easily take multiple days to finish (one
+64-point batch on 48 cores took 2+ days and wasn't done), so a batch will
+very likely straddle at least one reset before completing — this isn't a
+rare edge case, it's expected to happen regularly.
+
+The reset itself isn't a detection problem: since it kills every machine
+simultaneously, `harvest_completed_cases.py`'s SSH-based liveness check
+correctly finds nothing alive anywhere and classifies every mid-run case as
+genuinely killed (category 6) — no special-casing needed there. The gap is
+entirely on the *recovery* side: `proteus grid` has no resume mechanism for
+individual killed cases, so a fresh launch is needed for exactly the
+interrupted points.
+
+**Why one config per point, not a bigger batch config**: `proteus grid`
+always runs the full Cartesian product of whatever per-axis values a
+config gives it (`Grid.generate()`, `PROTEUS/src/proteus/grid/manage.py`).
+An arbitrary, scattered set of interrupted points essentially never forms
+a clean rectangular sub-grid, so a multi-value config would silently
+re-run other, already-successful combinations too. The only way to express
+"exactly these N points, nothing else" in the existing config format is N
+single-point configs (grid size 1).
+
+**What the script does**: classifies every one of the 1024 grid points
+into `success` (a `..._1_success` folder already exists in
+`simulation_data/`), `active` (a case is sitting in one of the *planned*
+batches — `grid_sweep_configs/batch_configs/batch*.toml` — and confirmed
+genuinely alive via the same SSH check `harvest_completed_cases.py` uses),
+`crashed` (a genuine code/physics failure — most likely reproducible, so
+**excluded from regeneration by default**; investigate before retrying
+with `--include-crashed`), `killed` (dead with no traceback and no clean
+finish — e.g. a cluster reset — **the default target**), or
+`never_attempted` (no case exists anywhere yet — normal for
+`batch03`..`batch16` before they're launched; **excluded by default**,
+since the existing 64-point batch configs are far more efficient for
+these than one-point-per-config — use `--include-never-attempted` to
+override). It reuses `harvest_completed_cases.py`'s scanning/classification
+logic directly (`import harvest_completed_cases as hc`) rather than
+duplicating it, so both scripts always agree on what "killed" vs "crashed"
+vs "active" means.
+
+```bash
+python3 scripts/generate_gapfill_configs.py --report-only   # just the breakdown, writes nothing
+python3 scripts/generate_gapfill_configs.py                  # default: regenerate configs for `killed` points only
+python3 scripts/generate_gapfill_configs.py --include-crashed --include-never-attempted  # everything remaining
+```
+
+**Output**: one `batch_gapfill_H<i>_C<i>_N<i>_S<i>_fO2<i>.toml` per targeted
+point (named with a `batch` prefix so `harvest_completed_cases.py`'s
+existing `discover_batches()` glob picks them up if pointed at that
+directory), plus a `launch.sh` helper (bounded-concurrency launcher for one
+machine, since each config only manages 1 case on its own), written into a
+fresh timestamped directory under `grid_sweep_configs/gapfill_configs/`
+(gitignored, like `simulation_data/`/`raw_grid_output/`/`logs/` — these are
+regeneratable on demand, not meant to accumulate in git history). Nothing
+is launched automatically — launching real cluster jobs stays a deliberate,
+separate step, same as any other sweep (see "Steps to launch a sweep" in
+`grid_sweep_cluster_howto.md`). Check on / harvest gap-fill results with:
+
+```bash
+python3 scripts/harvest_completed_cases.py --batch-configs <the-timestamped-gapfill-dir>
+```
+
+Validated against real project state when built: correctly reported
+61 success / 38 active / 15 crashed / 14 killed / 896 never-attempted
+(matching hand-computed expectations exactly), generated 14 configs for
+the `killed` bucket, and one was confirmed to launch correctly via a real
+`proteus grid --dry-run` on `cap001a` ("1 grid points, 1 threads"). Those
+14 configs (from the real killed points discovered during the aliveness-
+check bug investigation above) are sitting ready to launch under
+`grid_sweep_configs/gapfill_configs/20260724_102300/` as of this writing.
+
 ### Scheduled harvesting via cron
 
 `harvest_completed_cases.py` runs automatically every day at 07:00 (all
@@ -613,7 +707,7 @@ of `crontab -l` against what they were before, to make sure the edit
 didn't touch the two unrelated pre-existing jobs (see below).
 
 ```cron
-0 7 * * * flock -n /tmp/k218b_harvest_cron.lock /data/rdc49-2/anaconda3/envs/proteus/bin/python3 /data/rdc49-2/K218b_project/scripts/harvest_completed_cases.py >> /data/rdc49-2/K218b_project/logs/harvest_cron.log 2>&1
+0 7 * * * flock -n /tmp/k218b_harvest_cron.lock /data/rdc49-2/anaconda3/envs/proteus/bin/python3 /data/rdc49-2/K218b_project/scripts/harvest_completed_cases.py >> /data/rdc49-2/K218b_project/logs/harvest_cron_fallback.log 2>&1
 ```
 
 Notes on the specific pieces of this line, for anyone editing it later:
@@ -630,18 +724,27 @@ Notes on the specific pieces of this line, for anyone editing it later:
   hiccup) — `-n` makes it skip rather than queue if the lock is already
   held, so a stuck run blocks at most that one day's harvest, not every
   subsequent day's.
-- Output is appended to `logs/harvest_cron.log` (gitignored, like
-  `simulation_data/` and `raw_grid_output/`) rather than left for cron's
-  own mail-on-output behaviour, which may not even be configured on this
-  machine. Check that file for history/errors, not system mail. The
-  script itself prints timestamped start/finish/failure banners into that
-  log (see its docstring) precisely so a day's entry is easy to find and
-  an error is easy to grep for in a file that just keeps growing.
-- The existing crontab already had two unrelated jobs (`daily_github_backup.py`,
-  `backup_to_hardrive.py`) — this entry was appended, not replacing
-  anything. If you ever need to edit the crontab, use `crontab -l` /
-  `crontab -e` in place rather than regenerating it from scratch, to avoid
-  disturbing those.
+- The crontab's own `>>` redirect (`logs/harvest_cron_fallback.log`) is
+  only a fallback now, catching a catastrophic failure before the script's
+  own logging is even set up (e.g. an `ImportError`/`SyntaxError` at
+  startup) — it should normally stay empty or near-empty. The real,
+  day-to-day log is per-day: the script itself opens
+  `logs/harvest_YYYY-MM-DD.log` (see `--log-dir`/`--no-file-log`) and tees
+  its own stdout/stderr to both that file and its normal output, so each
+  morning's run gets its own file (`harvest_2026-07-24.log`, etc.) instead
+  of everything appending to one ever-growing file. Both are gitignored,
+  like `simulation_data/` and `raw_grid_output/`. Check the day's file for
+  history/errors, not system mail. The script prints timestamped
+  start/finish/failure banners into it (see its docstring) precisely so an
+  error is easy to find and grep for.
+- The existing crontab had two unrelated jobs (`daily_github_backup.py`,
+  `backup_to_hardrive.py`) already in it — **both were disabled (commented
+  out with a dated reason, not deleted) on 2026-07-24 at the user's
+  request**, unrelated to any bug here. If you ever need to edit the
+  crontab, use `crontab -l` / `crontab -e` in place rather than
+  regenerating it from scratch, to avoid disturbing those (or any future
+  unrelated entries), and re-check the untouched lines (e.g. via `md5sum`)
+  before and after any edit.
 
 **Unrelated finding worth flagging** (same issue already noted for
 `~/.bashrc` in `grid_sweep_cluster_howto.md`): the crontab has a
