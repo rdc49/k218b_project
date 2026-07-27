@@ -259,6 +259,25 @@ every command below instead.
    called... incompatible with multithreaded code` from JAX — this is
    expected noise, not a failure.
 
+   **If launching several sweeps in quick succession (e.g. a full batch of
+   13+ machines within a couple minutes, as on 2026-07-27), a few can take
+   several minutes — not seconds — to print anything at all**, including
+   the initial "Starting process manager" line, while the rest start
+   normally within ~15-90s. This is NFS contention from many machines
+   importing the same large Python/JAX/atmodeller packages off the same
+   shared conda env (`/data/rdc49-2/anaconda3/envs/proteus`) at once, not a
+   hang. Before assuming something is wrong, check the process is actually
+   alive and burning CPU rather than just re-reading an empty pane:
+   ```
+   ssh <machine> "ps aux | grep 'proteus grid' | grep -v grep"
+   ```
+   (look for `SNl+`/`RNl+` state with nonzero `%CPU`), and/or tail the
+   manager log directly, which is more reliable than `capture-pane` for a
+   session that hasn't printed anything to the terminal yet:
+   ```
+   ssh <machine> "tail -10 /data/rdc49-2/PROTEUS/output/<name>/manager.log"
+   ```
+
 5. Nothing further is needed to "log out" — each `ssh <machine> "..."` call
    above opens and closes its own connection; no persistent attached session
    is held open. The tmux session keeps running server-side after the SSH
@@ -445,34 +464,105 @@ sweeps" below (machine, session, config path, output name, launch date,
 thread count actually observed), and re-run the load survey for
 `cap001a`/`cap001b` periodically to find a home for batch16.
 
+**Update 2026-07-27: done.** All of batch03–batch16 launched today per the
+table above, plus a targeted gap-fill recovery for batch02 (see below) —
+see "Currently running sweeps" for the actual launch details. batch16 did
+not end up waiting for `cap001a`/`cap001b` to free up "naturally" as
+originally planned here — see the note on batch01/02 below for why.
+
 ## Currently running sweeps (update as sweeps finish / new ones launch)
 
-- `cap001a`, tmux session `proteus_batch01`:
-  `nice -n 19 proteus grid -c /data/rdc49-2/PROTEUS/input/nogit_grid_launch_configs/batch01_nosymlink.toml`
-  (64-case grid, output `k218b_project_main_parameter_sweep_batch01/`, real
-  data under `/data/rdc49-2/PROTEUS/output/` directly — see the symlink bug
-  note above), launched 2026-07-22 as a first test of the batch/harvesting
-  system on just 2 of the 14 machines before launching the rest. 24 threads
-  (matches cap001a's 24 cores). Check `harvest_completed_cases.py
-  --summary-only` or `tmux capture-pane -t proteus_batch01 -p | tail -20`
-  for progress.
-- `cap001b`, tmux session `proteus_batch02`:
-  `nice -n 19 proteus grid -c /data/rdc49-2/PROTEUS/input/nogit_grid_launch_configs/batch02_nosymlink.toml`
-  (64-case grid, output `k218b_project_main_parameter_sweep_batch02/`, same
-  real-data location note as above), launched 2026-07-22 alongside batch01
-  for the same test. 48 threads (matches cap001b's 48 cores).
+**Launched 2026-07-27** (all live-rechecked idle via `uptime`/`ps aux`
+immediately before launch; all confirmed via `tmux capture-pane`/
+`manager.log` showing real `queued→running→exited` progression, not an
+instant dry-run-like failure):
 
-The two scratch launch configs above (`batch01_nosymlink.toml`,
-`batch02_nosymlink.toml`, under
-`/data/rdc49-2/PROTEUS/input/nogit_grid_launch_configs/`) are copies of the
-checked-in `grid_sweep_configs/batch_configs/batch01.toml`/`batch02.toml`
-with `symlink` blanked — created before the checked-in configs themselves
-were updated to also blank `symlink` (see the bug note above). They're
-functionally identical to the checked-in configs now; either works if
-relaunching, but the checked-in ones are the ones that stay in sync with
-the rest of this project.
+- `cap001c`, tmux session `proteus_batch03`:
+  `nice -n 19 proteus grid -c grid_sweep_configs/batch_configs/batch03.toml`
+  (output `k218b_project_main_parameter_sweep_batch03/`). Launched 10:30,
+  48 threads (matches cap001c's 48 cores).
+- `cap001d`, tmux session `proteus_batch04`: same pattern, `batch04.toml`
+  (output `..._batch04/`). Launched 10:30, 48 threads.
+- `cap002b`, tmux session `proteus_batch05`: `batch05.toml`
+  (output `..._batch05/`). Launched 10:30, 48 threads.
+- `cap002c`, tmux session `proteus_batch06`: `batch06.toml`
+  (output `..._batch06/`). Launched 10:30, 48 threads.
+- `cap002d`, tmux session `proteus_batch07`: `batch07.toml`
+  (output `..._batch07/`). Launched 10:31, 48 threads.
+- `cap003a`, tmux session `proteus_batch08`: `batch08.toml`
+  (output `..._batch08/`). Launched 10:31, 48 threads.
+- `cap003b`, tmux session `proteus_batch09`: `batch09.toml`
+  (output `..._batch09/`). Launched 10:31, 48 threads.
+- `cap003c`, tmux session `proteus_batch10`: `batch10.toml`
+  (output `..._batch10/`). Launched 10:31, 48 threads.
+- `cap003d`, tmux session `proteus_batch11`: `batch11.toml`
+  (output `..._batch11/`). Launched 10:31 (slow to start — NFS import
+  contention from all 13 sweeps launching near-simultaneously off the same
+  shared conda env; manager didn't print "Starting process manager" until
+  10:35), 48 threads.
+- `cap004d`, tmux session `proteus_batch12`: `batch12.toml`
+  (output `..._batch12/`). Launched 10:31, 48 threads.
+- `cap005a`, tmux sessions `proteus_batch13` **and** `proteus_batch14`
+  (concurrent): `batch13.toml` / `batch14.toml` (outputs `..._batch13/`,
+  `..._batch14/`). Launched 10:31, **64 threads each** (128 desired workers
+  on 112 cores — the deliberate mild oversubscription already accepted in
+  CLAUDE.md, preferred over leaving a 112-core machine half-idle with just
+  one 64-point batch).
+- `cap004a`, tmux session `proteus_batch15`: `batch15.toml`
+  (output `..._batch15/`). Gated on a live re-check since this machine was
+  running another user's (`hen28`) sweep as of the 2026-07-24 survey —
+  re-checked 2026-07-27 immediately before launch and confirmed idle.
+  Launched 10:31 (same NFS-contention slow start as batch11; manager log
+  started 10:35), 48 threads.
+- `cap001a`, tmux session `proteus_batch16`: `batch16.toml`
+  (output `..._batch16/`). Launched 10:31, 24 threads (matches cap001a's 24
+  cores). **Deviation from the original plan above**: this batch was meant
+  to wait for `cap001a`/`cap001b` to free up from finishing batch01/batch02
+  — instead, an unplanned reboot at 05:54 today (see batch01/02 note below)
+  killed both mid-run, freeing the machines early but not because they
+  finished. `cap001a` was picked for batch16 (over `cap001b`) per user
+  decision, leaving `cap001b` for the batch02 gap-fill recovery instead.
+- `cap001b`, tmux session `gapfill_batch02`:
+  `bash grid_sweep_configs/gapfill_configs/20260727_103405/batch02_only/launch.sh 48`
+  — **not a normal batch config**, but a targeted recovery of exactly
+  batch02's 33 points that this morning's reboot left killed (see below).
+  Generated via `scripts/generate_gapfill_configs.py` (default run, 45
+  killed points across the whole grid: batch01's 12 + batch02's 33), then
+  filtered down to just batch02's sub-grid (`H∈{0,1}, C∈{2,3}, fO2=0`,
+  N/S unrestricted — batch02's unique index range) into
+  `grid_sweep_configs/gapfill_configs/20260727_103405/batch02_only/`
+  (33 single-point configs + `launch.sh`). Launched 10:34; confirmed via
+  `ps aux` showing up to 33 concurrent single-point `proteus grid` managers
+  each spawning a real `proteus start --offline` worker (some already
+  active, up to 83% CPU). batch02's 25 existing successes and 6 existing
+  crashes are untouched by this. Check progress with:
+  `python3 scripts/harvest_completed_cases.py --batch-configs grid_sweep_configs/gapfill_configs/20260727_103405/batch02_only`
 
 Previously running, now stopped:
+
+- `cap001a`, tmux session `proteus_batch01`, and `cap001b`, tmux session
+  `proteus_batch02`: launched 2026-07-22 as the first test of the
+  batch/harvesting system (batch01 on 24 threads, batch02 on 48 threads),
+  using scratch configs `batch01_nosymlink.toml`/`batch02_nosymlink.toml`
+  under `/data/rdc49-2/PROTEUS/input/nogit_grid_launch_configs/` (copies of
+  the checked-in batch configs with `symlink` blanked before the checked-in
+  ones themselves were updated to match — functionally identical now).
+  **Both were killed mid-run by an unplanned reboot at 05:54 on
+  2026-07-27** (part of a recurring Monday-morning kernel-patch cycle also
+  seen 2026-07-20 and 2026-07-13 — note this contradicts the "Sunday
+  midnight" reset described elsewhere in this project's docs; worth
+  reconciling separately). batch01 had 4 cases still running, batch02 had
+  27, when the reboot hit. As of the 07:00 harvest that same morning:
+  batch01 = 41 success / 12 killed / 11 crashed (64 total); batch02 = 25
+  success / 33 killed / 6 crashed (64 total) — every case in both batches
+  has already been drained out of `PROTEUS/output/` by the harvester, so
+  neither batch's own output directory needs further handling itself.
+  batch02's 33 killed points were gap-filled today (see `gapfill_batch02`
+  above); **batch01's 12 killed points were deliberately left
+  un-recovered** as out of scope for that task — use
+  `scripts/generate_gapfill_configs.py` (filtering to batch01's index
+  range: check `batch01.toml`'s H/C/fO2 values the same way batch02's were
+  derived above) whenever that recovery is wanted.
 
 - `cap003d`, tmux session `proteus_grid_extremety_sweep`:
   `proteus grid -c input/nogit_ensembles/K218b_project/extremety_sweep_atmodeller.toml`

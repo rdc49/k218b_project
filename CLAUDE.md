@@ -65,7 +65,43 @@ step — that is this project.
   log-cross-checking approach `harvest_completed_cases.py` reuses/adapts —
   see its own docstring for the single-sweep-focused analysis and
   plot-collection features it has that `harvest_completed_cases.py`
-  doesn't).
+  doesn't), `launch_batches.sh` (the only bash script here — automates
+  the manual "Steps to launch a sweep" procedure in
+  `grid_sweep_cluster_howto.md` across a manifest of machine/config/session
+  rows: live busy-check, refuse-by-default clobber check, staggered
+  detached-tmux launch, then a confirm pass. Run
+  `scripts/launch_batches.sh --help` for full usage; see the safety note
+  in its own header on why the clobber check exists — `proteus grid`'s
+  `Grid.__init__` unconditionally wipes an existing output directory with
+  no `--dry-run` protection), and `build_grid_summary.py` (rebuilds
+  `simulation_data/grid_master.csv` from scratch every run: one row per
+  point in the full 1024-point grid, always, identified by
+  `grid_index_<H,C,N,S,fO2>` + physical-value columns computed directly
+  from `full_parameter_sweep.toml` — populated for every row regardless of
+  whether that point has run yet. Only genuinely-successful `1_success`
+  cases populate the rest of a row, with that case's *last*
+  `runtime_helpfile.csv` row — crashed/killed cases are left blank, same
+  as never-attempted points, since their last row is just wherever the
+  sim died, not a finished state. Reuses
+  `harvest_completed_cases.load_full_grid_axes()` and
+  `generate_gapfill_configs`'s folder-name parsing/outcome classification
+  rather than reimplementing them. Note for anyone reading the output
+  CSV back with pandas: pass `dtype={'source_case_number': str}` (or
+  similar) — left as a bare `pd.read_csv()`, pandas infers that column as
+  float, silently dropping the leading zeros from e.g. `case_000000`), and
+  `compute_spectral_chisq.py` (adds 4 `chisq_*` columns to the same
+  `grid_master.csv` — one per observed spectrum in `k218b_spectra/`,
+  comparing each successful case's synthetic `offchem` transit spectrum
+  against it via `numpy.interp` + a raw chi-squared sum; see its own
+  docstring for exactly which observed files it uses and the overlap
+  trims applied. **Run this instead of (or after) `build_grid_summary.py`
+  whenever the chi-squared columns are wanted** — `build_grid_summary.py`
+  also fully rebuilds `grid_master.csv` from scratch, so running it alone
+  after `compute_spectral_chisq.py` would silently wipe the 4 chi-squared
+  columns back out; `compute_spectral_chisq.py` avoids this by calling
+  `build_grid_summary.build_summary()` directly for a fresh base table
+  rather than reading the CSV off disk, so it alone always produces the
+  complete 476-column file).
 - `grid_sweep_configs/` — `proteus grid` config files (`.toml`) defining
   parameter sweeps, as distinct from `k218b_fiducial.toml` (the per-run base
   config each sweep point derives from). `full_parameter_sweep.toml` is the
@@ -122,6 +158,32 @@ step — that is this project.
   the K2-18 b-specific results rather than treat the current content as final.
 - `reference_papers/` — supporting PDFs, e.g. `calder_2026.pdf` (the
   predecessor paper above).
+- `k218b_spectra/` — real observed K2-18 b transmission spectra used to
+  compute the `chisq_*` columns in `simulation_data/grid_master.csv` (see
+  `scripts/compute_spectral_chisq.py` below). One subdirectory per source:
+  - `madhusudhan_2023/` — Madhusudhan et al. 2023 (ApJL). JWST NIRISS SOSS
+    and NIRSpec G395H, each as `_native` (full resolution, used for the
+    chi-squared fit) and `_lowres` (plotting only, per that folder's own
+    `Readme.txt`/this project's README.txt).
+  - `madhusudhan_2025/` — Madhusudhan et al. 2025 (ApJL). JWST MIRI LRS,
+    reduced independently by two pipelines, JExoRES and JexoPipe
+    (`_jexores`/`_jexopipe` files) — genuinely alternative reductions of
+    the *same* wavelength range, not complementary coverage.
+  - `hu_2026/` — Hu et al. (bib key `Hu2025` in `paper/references.bib` as
+    of this writing; confirm whether "hu_2026"/`Hu2025` refer to the same
+    paper before assuming a `Hu2026` bib key exists). Four subfolders with
+    heavy redundancy across different pipelines/visits/detectors —
+    `niriss_nameless/` (2 files, NIRISS SOSS order1+order2 — same
+    exposure, two diffraction orders, NOT independent), `nirspec_combined/`
+    (6 files — only the 2 `*_direct.dat` per-grism files are non-redundant;
+    the 4 `*_shifted.dat` files are alternate reductions of the same
+    data), `nirspec_eureka_by_visit/` and `nirspec_exotedrf_by_visit/`
+    (8 files each, per-visit/detector — not currently used by
+    `compute_spectral_chisq.py` at all).
+  See `scripts/compute_spectral_chisq.py`'s own docstring for exactly
+  which files it uses per source and why (overlap trims between
+  same-instrument/same-exposure reductions, kept-as-is for genuinely
+  different instruments).
 - `k218b_fiducial.toml` — the fiducial PROTEUS configuration for this
   project: every non-default parameter is set explicitly with an inline
   comment justifying the choice. This is the base config that the grid sweep
@@ -614,8 +676,14 @@ fully drained is fine if you want to tidy it up.
 
 ### Recovering interrupted grid points: `scripts/generate_gapfill_configs.py`
 
-**Why this exists**: the IoA department cluster resets every Sunday at
-midnight, killing any jobs on any machine, cluster-wide. PROTEUS's own
+**Why this exists**: the IoA department cluster resets weekly, killing any
+jobs on any machine, cluster-wide. **Correction (2026-07-27): this is not
+Sunday midnight** — confirmed via `uptime -s`/`last reboot` across multiple
+machines on three separate occasions (2026-07-13, 2026-07-20, 2026-07-27),
+the actual pattern is a kernel-patch reboot early **Monday morning, around
+05:45-05:55**. This directly bit batch01/batch02 on 2026-07-27 (see
+`grid_sweep_cluster_howto.md`'s "Currently running sweeps" section) — both
+were killed mid-run by that morning's reboot, not by finishing. PROTEUS's own
 `max_days`/checkpointing (`max_days = 1` in every batch config) does
 nothing to protect against this — it only feeds a SLURM job-array script
 (`Grid.slurm_config`) that our configs never use (`use_slurm = false`
@@ -682,6 +750,32 @@ separate step, same as any other sweep (see "Steps to launch a sweep" in
 ```bash
 python3 scripts/harvest_completed_cases.py --batch-configs <the-timestamped-gapfill-dir>
 ```
+
+**No flag scopes generation to a single original batch** — the script
+always classifies/regenerates across the whole 1024-point grid in one go.
+To recover just one batch's killed points (e.g. batch02 while leaving
+batch01's separate killed points alone, done 2026-07-27), filter the
+generated filenames by that batch's full-grid index range afterward:
+read the batch's own `.toml` (`grid_sweep_configs/batch_configs/batchNN.toml`)
+for its H/C/N/S/fO2 value lists, cross-reference those values' positions
+(0-3) in `full_parameter_sweep.toml`'s per-axis lists to get the batch's
+index range (batches only ever restrict the H and C axes to a 2-value
+"half" each, plus a single fO2 value — N and S always span the full
+4-value axis, so only H/C/fO2 discriminate between batches), then copy
+just the matching `batch_gapfill_H<h>_C<c>_N*_S*_fO2<f>.toml` files (e.g.
+`batch_gapfill_H[01]_C[23]_N*_S*_fO20.toml` for batch02) plus `launch.sh`
+into their own subdirectory before launching — `launch.sh` globs every
+`batch_gapfill_*.toml` in its own directory, so anything left in there gets
+launched too.
+
+**`launch.sh`'s tmux pane shows only its own startup banner, never
+per-point progress** — it redirects each backgrounded `proteus grid` call
+to its own `<cfg>.launch.log` file
+(`nice -n 19 proteus grid -c "$cfg" > "${cfg%.toml}.launch.log" 2>&1 &`),
+not to the terminal. Don't read an idle-looking `tmux capture-pane` on a
+gap-fill session as a hang — check `ps aux | grep 'proteus start'` on that
+machine for live worker subprocesses, or tail the individual
+`<cfg>.launch.log` files, instead.
 
 Validated against real project state when built: correctly reported
 61 success / 38 active / 15 crashed / 14 killed / 896 never-attempted
