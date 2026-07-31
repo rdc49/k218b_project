@@ -1,0 +1,8 @@
+machine,launch_script_path,session_name
+cap001a,/data/rdc49-2/K218b_project/grid_sweep_configs/vulcan_rerun_configs/full_run_20260730/cap001a/launch_cap001a.sh,vulcan_rerun_cap001a
+cap002b,/data/rdc49-2/K218b_project/grid_sweep_configs/vulcan_rerun_configs/full_run_20260730/cap002b/launch_cap002b.sh,vulcan_rerun_cap002b
+cap003b,/data/rdc49-2/K218b_project/grid_sweep_configs/vulcan_rerun_configs/full_run_20260730/cap003b/launch_cap003b.sh,vulcan_rerun_cap003b
+cap003c,/data/rdc49-2/K218b_project/grid_sweep_configs/vulcan_rerun_configs/full_run_20260730/cap003c/launch_cap003c.sh,vulcan_rerun_cap003c
+cap003d,/data/rdc49-2/K218b_project/grid_sweep_configs/vulcan_rerun_configs/full_run_20260730/cap003d/launch_cap003d.sh,vulcan_rerun_cap003d
+cap004a,/data/rdc49-2/K218b_project/grid_sweep_configs/vulcan_rerun_configs/full_run_20260730/cap004a/launch_cap004a.sh,vulcan_rerun_cap004a
+cap005a,/data/rdc49-2/K218b_project/grid_sweep_configs/vulcan_rerun_configs/full_run_20260730/cap005a/launch_cap005a.sh,vulcan_rerun_cap005a

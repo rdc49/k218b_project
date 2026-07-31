@@ -12,7 +12,7 @@ each grid point, how well does its synthetic spectrum match the real
 planet, expressed as a chi-squared goodness-of-fit against three real
 observed K2-18 b spectra (see k218b_spectra/, documented in CLAUDE.md).
 
-Adds 4 columns (not 3 -- see below):
+Adds 8 columns (4 raw chisq_* + 4 paired chisq_*_reduced -- see below):
   chisq_madhu_2023           Madhusudhan et al. 2023: native NIRISS SOSS
                              + native NIRSpec G395H (trimmed at their
                              ~0.084um overlap), combined into one fit.
@@ -41,15 +41,24 @@ Adds 4 columns (not 3 -- see below):
                              multi-instrument chi-squared.
 
 Chi-squared = sum( (observed_ppm - model_ppm)^2 / uncertainty_ppm^2 ),
-raw (not reduced), over every observed data point in that source after
-the trims above. The model spectrum (native petitRADTRANS grid, ~0.05-
-300um) is linearly interpolated (numpy.interp) onto each observed data
-point's exact wavelength -- not bin-averaged, since the native grid's
-point spacing is comparable to or coarser than some observed bins'
-widths, making bin-averaging noisy/undefined in places; point-
-interpolation is robust regardless of relative resolution and standard
-practice here. All observed wavelengths fall well inside the synthetic
-grid's range, so this never extrapolates.
+raw, over every observed data point in that source after the trims
+above. The model spectrum (native petitRADTRANS grid, ~0.05-300um) is
+linearly interpolated (numpy.interp) onto each observed data point's
+exact wavelength -- not bin-averaged, since the native grid's point
+spacing is comparable to or coarser than some observed bins' widths,
+making bin-averaging noisy/undefined in places; point-interpolation is
+robust regardless of relative resolution and standard practice here.
+All observed wavelengths fall well inside the synthetic grid's range,
+so this never extrapolates.
+
+Each raw chisq_* column is paired with a chisq_*_reduced column, =
+chisq / N, where N is that source's own number of observed data points
+after trims. dof = N (k=0): each grid point is a fixed forward-model
+evaluation (fO2/H/C/N/S come from the grid, nothing is fitted to the
+observed spectrum), so no parameters are subtracted off. This is what
+makes the reduced values comparable across the four sources despite
+their different N, and gives an absolute goodness-of-fit scale
+(reduced chisq ~1 is a good fit) that the raw column doesn't.
 
 Units: the observed files are a mix of fractional (Rp/Rs)^2 (Madhusudhan
 data, hu_2026 nirspec_combined) and already-ppm (hu_2026 NIRISS ECSV
@@ -63,11 +72,11 @@ on every run (no read-modify-write) -- so a script that only appended
 columns to the existing file would have its work silently wiped out the
 next time someone re-runs build_grid_summary.py alone. Instead, this
 script imports build_grid_summary.build_summary() directly for a fresh,
-complete base DataFrame, adds the 4 chi-squared columns, and writes the
+complete base DataFrame, adds the 8 chi-squared columns, and writes the
 complete file itself. Run THIS script (not build_grid_summary.py alone)
 whenever the chi-squared columns are wanted -- it produces the full
-476-column file (472 base + 4 chi-squared); build_grid_summary.py alone
-only produces the 472 base columns.
+481-column file (473 base + 4 raw chisq + 4 reduced chisq);
+build_grid_summary.py alone only produces the 473 base columns.
 
 Usage:
     python3 scripts/compute_spectral_chisq.py [--dry-run] [--output PATH]
@@ -103,6 +112,8 @@ CHISQ_COLUMNS = [
     "chisq_madhu_2025_jexopipe",
     "chisq_hu_2026",
 ]
+
+REDUCED_SUFFIX = "_reduced"
 
 ObservedSpectrum = tuple[np.ndarray, np.ndarray, np.ndarray]  # (wave_um, depth_ppm, unc_ppm)
 
@@ -251,11 +262,16 @@ def chi_squared(
 
 def compute_all_chisq(
     df: pd.DataFrame, spectra_dir: Path, dest_dir: Path
-) -> tuple[pd.DataFrame, dict[str, int]]:
+) -> tuple[pd.DataFrame, dict[str, int], dict[str, int]]:
     observed = load_all_observed(spectra_dir)
+    # dof = N (k=0) -- see module docstring: grid points are fixed
+    # forward-model evaluations, not fits, so no parameters are
+    # subtracted off the point count.
+    n_points = {col: obs[0].size for col, obs in observed.items()}
 
     for col in CHISQ_COLUMNS:
         df[col] = np.nan
+        df[col + REDUCED_SUFFIX] = np.nan
     n_fit = {col: 0 for col in CHISQ_COLUMNS}
 
     for row_idx in df.index:
@@ -267,10 +283,12 @@ def compute_all_chisq(
             continue
         model_wave, model_depth_ppm = spectrum
         for col, obs in observed.items():
-            df.at[row_idx, col] = chi_squared(model_wave, model_depth_ppm, obs)
+            value = chi_squared(model_wave, model_depth_ppm, obs)
+            df.at[row_idx, col] = value
+            df.at[row_idx, col + REDUCED_SUFFIX] = value / n_points[col]
             n_fit[col] += 1
 
-    return df, n_fit
+    return df, n_fit, n_points
 
 
 def main() -> int:
@@ -303,12 +321,20 @@ def main() -> int:
     total = len(df)
     populated = int((df["source_case_dir"] != "").sum())
 
-    df, n_fit = compute_all_chisq(df, args.spectra_dir, args.dest)
+    df, n_fit, n_points = compute_all_chisq(df, args.spectra_dir, args.dest)
 
     print("=" * 70)
-    print(f"Grid summary: {populated} / {total} points populated (1_success only)")
+    n_success = int((df["source_outcome"] == "success").sum())
+    n_vulcan_crashed = int((df["source_outcome"] == "vulcan_crashed").sum())
+    print(
+        f"Grid summary: {populated} / {total} points populated "
+        f"({n_success} success, {n_vulcan_crashed} vulcan_crashed)"
+    )
     for col in CHISQ_COLUMNS:
-        print(f"  {col}: {n_fit[col]} / {populated} fitted")
+        print(
+            f"  {col}: {n_fit[col]} / {populated} fitted "
+            f"(N={n_points[col]} obs points, dof=N)"
+        )
     print("=" * 70)
 
     if args.dry_run:

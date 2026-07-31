@@ -40,5 +40,9 @@ logs/*
 grid_sweep_configs/gapfill_configs/*
 !grid_sweep_configs/gapfill_configs/.gitkeep
 
+# Regeneratable live-status report (scripts/generate_grid_status.py); a
+# point-in-time snapshot, not something to accumulate in git history
+grid_status_report.html
+
 # OS cruft
 .DS_Store

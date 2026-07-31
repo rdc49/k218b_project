@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Build simulation_data/grid_master.csv -- one row per point in the full
-fO2 x H x C x N x S grid, populated from each successfully-completed
-case's *final* runtime_helpfile.csv row.
+fO2 x H x C x N x S grid, populated from each finished-main-loop case's
+*final* runtime_helpfile.csv row (see "Scope" below for exactly which
+outcome categories count as finished).
 
 Why this exists
 -----------------------------------------------------------------------
@@ -23,11 +24,21 @@ scripts/generate_gapfill_configs.py already use), not read from any
 per-case file -- so they're populated identically for every one of the
 1024 rows, whether or not that point has a successful case yet.
 
-Scope: only genuinely-successful ("1_success") cases populate a row.
-Crashed/killed cases still have a runtime_helpfile.csv, but its last row
-is wherever the simulation happened to be when it died, not a physically
-meaningful "finished" state -- so those grid points are left blank, same
-as points never attempted at all, until a (re)run succeeds.
+Scope: a row is populated by any case whose runtime_helpfile.csv last row
+reflects a genuinely finished main coupled loop -- that's "1_success"
+cases, and also "7_crash_atmos_chem_step*" cases: for those, the main
+loop already finished successfully and only the *offline* VULCAN
+atmos-chem post-processing step crashed afterwards (a shared-file race
+condition, see vulcan_chem_funs_race_condition.md), so their last
+runtime_helpfile.csv row is just as physically meaningful as a genuine
+success -- they simply won't have an offchem synthetic spectrum, so
+compute_spectral_chisq.py's per-case spectrum lookup naturally skips them
+(chisq stays NaN) rather than needing any special-casing here. All other
+crashed/killed cases are left blank, same as points never attempted at
+all: their last row is wherever the simulation happened to be when it
+died, not a finished state. A "source_outcome" column records which of
+the two populating buckets ("success" / "vulcan_crashed") a row came
+from.
 
 Row structure: always exactly one row per point in the full grid (1024
 for the current 4-value-per-axis sweep), in a fixed deterministic order.
@@ -81,13 +92,25 @@ BUDGET_COLUMN = {
 PROVENANCE_RE = re.compile(r"__from_(?P<batch>[^_]+)_case_(?P<case>\d+)__")
 
 
-def find_successful_cases(dest_dir: Path) -> dict[tuple[int, ...], Path]:
-    """{index_tuple: case_dir} for every 1_success case in simulation_data/.
+POPULATING_OUTCOMES = ("success", "vulcan_crashed")
 
-    If more than one successful folder somehow matches the same index
-    tuple, keep the most-recently-modified one and warn about the rest.
+
+def find_populatable_cases(dest_dir: Path) -> dict[tuple[int, ...], tuple[Path, str]]:
+    """{index_tuple: (case_dir, outcome)} for every case in simulation_data/
+    whose runtime_helpfile.csv last row reflects a genuinely finished main
+    loop -- "1_success" cases, and "7_crash_atmos_chem_step*" cases (main
+    loop finished; only the offline VULCAN post-processing step crashed).
+    All other crash/kill categories are excluded, same as never-attempted
+    points.
+
+    If more than one folder matches the same index tuple: a "success" case
+    always wins over a "vulcan_crashed" one for that point (matches this
+    project's usual "success always wins" convention, e.g.
+    generate_gapfill_configs.py's scan_simulation_data()); between two
+    folders in the same bucket, keep the most-recently-modified one and
+    warn about the rest.
     """
-    resolved: dict[tuple[int, ...], Path] = {}
+    resolved: dict[tuple[int, ...], tuple[Path, str]] = {}
     if not dest_dir.is_dir():
         return resolved
 
@@ -98,22 +121,44 @@ def find_successful_cases(dest_dir: Path) -> dict[tuple[int, ...], Path]:
         if parsed is None:
             continue
         indices, outcome_tag = parsed
-        if ggc.classify_outcome_tag(outcome_tag) != "success":
+        bucket = ggc.classify_outcome_tag(outcome_tag)
+        if bucket not in POPULATING_OUTCOMES:
             continue
 
         existing = resolved.get(indices)
         if existing is None:
-            resolved[indices] = entry
-        else:
-            existing_mtime = existing.stat().st_mtime
+            resolved[indices] = (entry, bucket)
+            continue
+
+        existing_entry, existing_bucket = existing
+        if bucket == existing_bucket:
+            existing_mtime = existing_entry.stat().st_mtime
             new_mtime = entry.stat().st_mtime
-            newer, older = (entry, existing) if new_mtime > existing_mtime else (existing, entry)
+            newer, older = (
+                (entry, existing_entry) if new_mtime > existing_mtime else (existing_entry, entry)
+            )
             print(
-                f"warning: multiple successful cases for grid point {indices} -- "
+                f"warning: multiple {bucket} cases for grid point {indices} -- "
                 f"keeping {newer.name} (newer), discarding {older.name}",
                 file=sys.stderr,
             )
-            resolved[indices] = newer
+            resolved[indices] = (newer, bucket)
+        elif bucket == "success" and existing_bucket == "vulcan_crashed":
+            print(
+                f"note: grid point {indices} has both a vulcan_crashed case "
+                f"({existing_entry.name}) and a success case ({entry.name}) -- "
+                f"using the success case",
+                file=sys.stderr,
+            )
+            resolved[indices] = (entry, "success")
+        else:
+            # existing is "success", new is "vulcan_crashed" -- success wins, keep existing.
+            print(
+                f"note: grid point {indices} has both a success case "
+                f"({existing_entry.name}) and a vulcan_crashed case "
+                f"({entry.name}) -- keeping the success case",
+                file=sys.stderr,
+            )
 
     return resolved
 
@@ -162,15 +207,17 @@ def build_summary(full_sweep_path: Path, dest_dir: Path) -> pd.DataFrame:
     base_df["source_case_dir"] = ""
     base_df["source_batch"] = ""
     base_df["source_case_number"] = ""
+    base_df["source_outcome"] = ""
 
-    successful = find_successful_cases(dest_dir)
+    populatable = find_populatable_cases(dest_dir)
 
     helpfile_rows: dict[int, pd.Series] = {}
     helpfile_columns: list[str] = []
     for row_idx, indices in enumerate(all_indices):
-        case_dir = successful.get(indices)
-        if case_dir is None:
+        entry = populatable.get(indices)
+        if entry is None:
             continue
+        case_dir, outcome = entry
         last_row = load_last_row(case_dir)
         if last_row is None:
             continue
@@ -178,6 +225,7 @@ def build_summary(full_sweep_path: Path, dest_dir: Path) -> pd.DataFrame:
         batch, case_num = parse_provenance(case_dir.name)
         base_df.at[row_idx, "source_batch"] = batch
         base_df.at[row_idx, "source_case_number"] = case_num
+        base_df.at[row_idx, "source_outcome"] = outcome
         helpfile_rows[row_idx] = last_row
         # Union of columns across all cases, in first-seen order -- avoids
         # silently dropping columns if a later case's helpfile has extra
@@ -219,9 +267,14 @@ def main() -> int:
 
     total = len(df)
     populated = int((df["source_case_dir"] != "").sum())
+    n_success = int((df["source_outcome"] == "success").sum())
+    n_vulcan_crashed = int((df["source_outcome"] == "vulcan_crashed").sum())
 
     print("=" * 70)
-    print(f"Grid summary: {populated} / {total} points populated (1_success only)")
+    print(
+        f"Grid summary: {populated} / {total} points populated "
+        f"({n_success} success, {n_vulcan_crashed} vulcan_crashed)"
+    )
     print("=" * 70)
 
     if args.dry_run:

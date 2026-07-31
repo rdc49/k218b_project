@@ -1,0 +1,12 @@
+Hi Robb,
+
+A couple of the cap* machines ran out of /tmp space this week.
+
+Looking in /tmp there are hundreds of proteus directories that are not being cleared.
+
+Could you have a look at the proteus configuration and see if there is an option to put those temporary directories in your data directory please?
+
+Otherwise a script to clear those directories out after the processing has finished could also work?
+
+Thanks a lot,
+Neil

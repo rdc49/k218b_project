@@ -1,0 +1,202 @@
+Atmodeller initialized with double precision (float64)
+[[93m[1m WARNING [21m[0m] The archive tar file does not exist: /data/rdc49-2/K218b_project/simulation_data/grid_H3_C0_N0_S1_fO22__from_batch11_case_000033__7_crash_atmos_chem_step/data/data.tar
+[[32m[1m INFO  [21m[0m] Running atmospheric chemistry...
+[[32m[1m INFO  [21m[0m]     Using vulcan module, offline
+[[32m[1m INFO  [21m[0m] Elements conserved in the network.
+[[32m[1m INFO  [21m[0m] No duplicates in the network.
+[[32m[1m INFO  [21m[0m] Elements conserved in the network.
+[[32m[1m INFO  [21m[0m] No duplicates in the network.
+[[32m[1m INFO  [21m[0m] Running VULCAN
+[[32m[1m INFO  [21m[0m] Initializing with compositions from ASCII file /data/rdc49-2/K218b_project/simulation_data/grid_H3_C0_N0_S1_fO22__from_batch11_case_000033__7_crash_atmos_chem_step/offchem/vmrs.dat
+[[32m[1m INFO  [21m[0m] Input stellar spectrum from 2.0 to 700.0
+[[32m[1m INFO  [21m[0m] Using wavelength bins from 2.0 to 655.5
+[[32m[1m INFO  [21m[0m] Include molecular diffusion.
+[[32m[1m INFO  [21m[0m] Starting VULCAN integration with 1 threads...
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/op.py:1261: RuntimeWarning: divide by zero encountered in scalar divide
+  Hp[i] = kb * Tco[i] / (atm.mu[i] / Navo * atm.g[i])
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[32m[1m INFO  [21m[0m] Elapsed time: 1.00e-06 || Step number: 100/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 1.00e-08
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/op.py:4016: RuntimeWarning: overflow encountered in exp
+  var.sflux = var.sflux_top * np.exp(-1.0 * tau / np.cos(self.cfg.sl_angle))
+/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/op.py:4025: RuntimeWarning: overflow encountered in exp
+  tran = np.exp(-1.0 / edd * (1.0 - w0) ** 0.5 * delta_tau)  # 2D: nz * nbins
+/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/op.py:4053: RuntimeWarning: overflow encountered in square
+  chi = zeta_m**2 * tran**2 - zeta_p**2
+/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/op.py:4054: RuntimeWarning: overflow encountered in square
+  xi = zeta_p * zeta_m * (1.0 - tran**2)
+/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/op.py:4058: RuntimeWarning: invalid value encountered in multiply
+  i_u = phi * g_p * dir_flux[:-1] - (xi * g_m + chi * g_p) * dir_flux[1:]
+/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/op.py:4058: RuntimeWarning: invalid value encountered in add
+  i_u = phi * g_p * dir_flux[:-1] - (xi * g_m + chi * g_p) * dir_flux[1:]
+/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/op.py:4058: RuntimeWarning: invalid value encountered in subtract
+  i_u = phi * g_p * dir_flux[:-1] - (xi * g_m + chi * g_p) * dir_flux[1:]
+/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/op.py:4059: RuntimeWarning: invalid value encountered in multiply
+  i_d = phi * g_m * dir_flux[1:] - (chi * g_m + xi * g_p) * dir_flux[:-1]
+/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/op.py:4059: RuntimeWarning: invalid value encountered in add
+  i_d = phi * g_m * dir_flux[1:] - (chi * g_m + xi * g_p) * dir_flux[:-1]
+/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/op.py:4059: RuntimeWarning: invalid value encountered in subtract
+  i_d = phi * g_m * dir_flux[1:] - (chi * g_m + xi * g_p) * dir_flux[:-1]
+/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/op.py:4079: RuntimeWarning: invalid value encountered in multiply
+  * (phi[j] * var.dflux_d[j + 1] - xi[j] * var.dflux_u[j] + i_d[j] / mu_ang)
+/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/op.py:4079: RuntimeWarning: invalid value encountered in subtract
+  * (phi[j] * var.dflux_d[j + 1] - xi[j] * var.dflux_u[j] + i_d[j] / mu_ang)
+/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/op.py:4087: RuntimeWarning: invalid value encountered in multiply
+  - xi[j - 1] * var.dflux_d[j]
+Uncaught exception
+Traceback (most recent call last):
+  File "/data/rdc49-2/anaconda3/envs/proteus/bin/proteus", line 7, in <module>
+    sys.exit(cli())
+             ^^^^^
+  File "/data/rdc49-2/anaconda3/envs/proteus/lib/python3.12/site-packages/click/core.py", line 1485, in __call__
+    return self.main(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/anaconda3/envs/proteus/lib/python3.12/site-packages/click/core.py", line 1406, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/anaconda3/envs/proteus/lib/python3.12/site-packages/click/core.py", line 1873, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/anaconda3/envs/proteus/lib/python3.12/site-packages/click/core.py", line 1269, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/anaconda3/envs/proteus/lib/python3.12/site-packages/click/core.py", line 824, in invoke
+    return callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/PROTEUS/src/proteus/cli.py", line 649, in offchem
+    runner.offline_chemistry()
+  File "/data/rdc49-2/PROTEUS/src/proteus/proteus.py", line 1332, in offline_chemistry
+    result = run_chemistry(self.directories, self.config, hf_row)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/PROTEUS/src/proteus/atmos_chem/wrapper.py", line 72, in run_chemistry
+    success = _run(dirs, config, hf_row)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/PROTEUS/src/proteus/atmos_chem/vulcan.py", line 396, in run_vulcan
+    vulcan.run_vulcan(vcfg, not has_made)
+  File "/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/vulcan.py", line 160, in run_vulcan
+    integ(data_var, data_atm, data_para, make_atm, atmos=atmos)
+  File "/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/op.py", line 1088, in __call__
+    var, para = self.odesolver.one_step(var, atm, para)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/op.py", line 4560, in one_step
+    var, para = getattr(self, para.solver_str)(var, atm, para)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/PROTEUS/VULCAN/src/vulcan/op.py", line 4370, in solver
+    k1_flat = scipy.linalg.solve_banded((bw, bw), lhs_b, df)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/anaconda3/envs/proteus/lib/python3.12/site-packages/scipy/linalg/_basic.py", line 826, in solve_banded
+    return _solve_banded(nlower, nupper, ab, b, overwrite_ab=overwrite_ab,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/anaconda3/envs/proteus/lib/python3.12/site-packages/scipy/_lib/_util.py", line 1181, in wrapper
+    return f(*arrays, *other_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/anaconda3/envs/proteus/lib/python3.12/site-packages/scipy/linalg/_basic.py", line 832, in _solve_banded
+    a1 = _asarray_validated(ab, check_finite=check_finite, as_inexact=True)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/anaconda3/envs/proteus/lib/python3.12/site-packages/scipy/_lib/_util.py", line 468, in _asarray_validated
+    a = toarray(a)
+        ^^^^^^^^^^
+  File "/data/rdc49-2/anaconda3/envs/proteus/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py", line 673, in asarray_chkfinite
+    raise ValueError(
+ValueError: array must not contain infs or NaNs

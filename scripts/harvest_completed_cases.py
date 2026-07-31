@@ -189,7 +189,7 @@ GRID_INDEX_LEGEND_NAME = "GRID_INDEX_LEGEND.txt"
 
 # Categories from analyze_grid_sweep.CATEGORY_LABELS that represent a
 # genuinely finished case, safe to move out of its batch.
-HARVESTABLE_CATEGORIES = {1, 2, 3, 6}
+HARVESTABLE_CATEGORIES = {1, 2, 3, 6, 7}
 # Category 6 covers both "no log at all" (never started / crashed before
 # logging -- NOT harvestable, too ambiguous) and "log exists but went
 # stale with no traceback" (killed externally -- IS harvestable). The two
@@ -412,11 +412,12 @@ def determine_real_outcome(
         exc_type, exc_msg = ag.extract_exception(text, tb_pos)
         loop_at_crash = ag.extract_last_loop(text, before_pos=tb_pos)
         loop_str = f"loop {loop_at_crash}" if loop_at_crash is not None else "before loop 1"
-        observe_pos = text.find("Observing the planet")
-        category = 3 if (observe_pos != -1 and observe_pos < tb_pos) else 2
+        category = ag.classify_crash_stage(text, tb_pos)
         sig = ag.match_known_signature(exc_type, exc_msg)
         exc_label = sig or exc_type or "unrecognized exception"
-        stage = "observe/spectrum step" if category == 3 else "main loop"
+        stage = {3: "observe/spectrum step", 7: "atmos_chem (VULCAN) step"}.get(
+            category, "main loop"
+        )
         outcome = f"crashed in {stage} ({exc_label}) @ {loop_str}"
         return category, outcome, sig, status
 

@@ -1,0 +1,38 @@
+Atmodeller initialized with double precision (float64)
+[[93m[1m WARNING [21m[0m] The archive tar file does not exist: /data/rdc49-2/K218b_project/simulation_data/grid_H1_C3_N1_S2_fO22__from_batch10_case_000054__7_crash_atmos_chem_step_vulcan_chem_funs_race_syntax_error/data/data.tar
+[[32m[1m INFO  [21m[0m] Running atmospheric chemistry...
+[[32m[1m INFO  [21m[0m]     Using vulcan module, offline
+[[91m[1m ERROR [21m[0m] Could not find NetCDF file '/data/rdc49-2/K218b_project/simulation_data/grid_H1_C3_N1_S2_fO22__from_batch10_case_000054__7_crash_atmos_chem_step_vulcan_chem_funs_race_syntax_error/data/1335381796_atm.nc'
+[[93m[1m WARNING [21m[0m] One or more NetCDF files could not be found
+Uncaught exception
+Traceback (most recent call last):
+  File "/data/rdc49-2/anaconda3/envs/proteus/bin/proteus", line 7, in <module>
+    sys.exit(cli())
+             ^^^^^
+  File "/data/rdc49-2/anaconda3/envs/proteus/lib/python3.12/site-packages/click/core.py", line 1485, in __call__
+    return self.main(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/anaconda3/envs/proteus/lib/python3.12/site-packages/click/core.py", line 1406, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/anaconda3/envs/proteus/lib/python3.12/site-packages/click/core.py", line 1873, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/anaconda3/envs/proteus/lib/python3.12/site-packages/click/core.py", line 1269, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/anaconda3/envs/proteus/lib/python3.12/site-packages/click/core.py", line 824, in invoke
+    return callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/PROTEUS/src/proteus/cli.py", line 649, in offchem
+    runner.offline_chemistry()
+  File "/data/rdc49-2/PROTEUS/src/proteus/proteus.py", line 1332, in offline_chemistry
+    result = run_chemistry(self.directories, self.config, hf_row)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/PROTEUS/src/proteus/atmos_chem/wrapper.py", line 72, in run_chemistry
+    success = _run(dirs, config, hf_row)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/rdc49-2/PROTEUS/src/proteus/atmos_chem/vulcan.py", line 103, in run_vulcan
+    atmos = read_atmosphere_data(
+            ^^^^^^^^^^^^^^^^^^^^^
+TypeError: 'NoneType' object is not subscriptable

@@ -1,0 +1,76 @@
+Atmodeller initialized with double precision (float64)
+[[93m[1m WARNING [21m[0m] The archive tar file does not exist: /data/rdc49-2/K218b_project/simulation_data/grid_H1_C1_N2_S3_fO21__from_batch05_case_000059__7_crash_atmos_chem_step_vulcan_chem_funs_race_syntax_error/data/data.tar
+[[32m[1m INFO  [21m[0m] Running atmospheric chemistry...
+[[32m[1m INFO  [21m[0m]     Using vulcan module, offline
+[[32m[1m INFO  [21m[0m] Elements conserved in the network.
+[[32m[1m INFO  [21m[0m] No duplicates in the network.
+[[32m[1m INFO  [21m[0m] Elements conserved in the network.
+[[32m[1m INFO  [21m[0m] No duplicates in the network.
+[[32m[1m INFO  [21m[0m] Running VULCAN
+[[32m[1m INFO  [21m[0m] Initializing with compositions from ASCII file /data/rdc49-2/K218b_project/simulation_data/grid_H1_C1_N2_S3_fO21__from_batch05_case_000059__7_crash_atmos_chem_step_vulcan_chem_funs_race_syntax_error/offchem/vmrs.dat
+[[32m[1m INFO  [21m[0m] Input stellar spectrum from 2.0 to 700.0
+[[32m[1m INFO  [21m[0m] Using wavelength bins from 2.0 to 655.5
+[[32m[1m INFO  [21m[0m] Include molecular diffusion.
+[[32m[1m INFO  [21m[0m] Starting VULCAN integration with 1 threads...
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[32m[1m INFO  [21m[0m] Elapsed time: 1.27e-02 || Step number: 100/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 1.42e-03
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 6.83e+00 || Step number: 200/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 2.50e-01
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 8.17e+01 || Step number: 300/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 1.96e+00
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 1.76e+03 || Step number: 400/30000
+[[32m[1m INFO  [21m[0m] longdy = 7.66e+03      || longdy/dt = 9.36e+00  || dt = 9.54e+01
+[[32m[1m INFO  [21m[0m] from nz = 27 and CS
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 1.23e+05 || Step number: 500/30000
+[[32m[1m INFO  [21m[0m] longdy = 4.66e+01      || longdy/dt = 7.50e-04  || dt = 1.31e+02
+[[32m[1m INFO  [21m[0m] from nz = 35 and CS
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 5.26e+05 || Step number: 600/30000
+[[32m[1m INFO  [21m[0m] longdy = 2.02e-01      || longdy/dt = 7.72e-07  || dt = 6.50e+02
+[[32m[1m INFO  [21m[0m] from nz = 50 and N2
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 8.63e+05 || Step number: 700/30000
+[[32m[1m INFO  [21m[0m] longdy = 2.61e-01      || longdy/dt = 7.81e-07  || dt = 2.54e+03
+[[32m[1m INFO  [21m[0m] from nz = 50 and S4
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 1.24e+06 || Step number: 800/30000
+[[32m[1m INFO  [21m[0m] longdy = 7.28e-02      || longdy/dt = 1.95e-07  || dt = 1.52e+03
+[[32m[1m INFO  [21m[0m] from nz = 13 and C6H6
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 1.57e+06 || Step number: 900/30000
+[[32m[1m INFO  [21m[0m] longdy = 7.43e-01      || longdy/dt = 2.30e-06  || dt = 1.35e+04
+[[32m[1m INFO  [21m[0m] from nz = 9 and C6H6
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 2.13e+06 || Step number: 1000/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.78e-06  || dt = 8.59e+01
+[[32m[1m INFO  [21m[0m] from nz = 9 and C6H6
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Integration successful with 1034 steps
+[[32m[1m INFO  [21m[0m] long dy, long dydt = 0.047477369605436845, 1.1937816521864696e-07
+[[32m[1m INFO  [21m[0m] Total atom loss:
+[[32m[1m INFO  [21m[0m] H: -6.861831396511328e-05 
+[[32m[1m INFO  [21m[0m] O: -6.655733667581095e-05 
+[[32m[1m INFO  [21m[0m] C: -6.26300230082811e-05 
+[[32m[1m INFO  [21m[0m] N: -0.000615222791559381 
+[[32m[1m INFO  [21m[0m] S: -5.89614132586596e-05 
+[[32m[1m INFO  [21m[0m] ------ Live long and prosper \V/ ------
+[[32m[1m INFO  [21m[0m]     done
+Atmodeller initialized with double precision (float64)
+[[93m[1m WARNING [21m[0m] The archive tar file does not exist: /data/rdc49-2/K218b_project/simulation_data/grid_H1_C1_N2_S3_fO21__from_batch05_case_000059__7_crash_atmos_chem_step_vulcan_chem_funs_race_syntax_error/data/data.tar
+[[32m[1m INFO  [21m[0m] Observing the planet...
+Loading PHOENIX star table in file '/data/rdc49-2/FWL_DATA/prt/input_data/stellar_spectra/phoenix/phoenix.startable.petitRADTRANS.h5'... Done.

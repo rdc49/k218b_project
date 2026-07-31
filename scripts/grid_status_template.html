@@ -1,0 +1,625 @@
+<title>K2-18 b Grid Sweep — Live Run Status</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bg: #0c0e12;
+    --panel: #14171d;
+    --panel-2: #191c23;
+    --border: #262a33;
+    --border-soft: #1d2028;
+    --text: #e9e6e0;
+    --text-dim: #9198a3;
+    --text-faint: #5c636f;
+    --accent: #e8763f;
+    --accent-dim: #b85a2e;
+    --accent-glow: rgba(232, 118, 63, 0.16);
+
+    --el-H: #cfd6dd;
+    --el-H-bg: rgba(207, 214, 221, 0.10);
+    --el-C: #6b7280;
+    --el-C-bg: rgba(148, 155, 165, 0.14);
+    --el-N: #5b8def;
+    --el-N-bg: rgba(91, 141, 239, 0.14);
+    --el-S: #d9c34a;
+    --el-S-bg: rgba(217, 195, 74, 0.14);
+    --el-fO2: #d9564a;
+    --el-fO2-bg: rgba(217, 86, 74, 0.14);
+
+    --gapfill: #7fbf8f;
+    --gapfill-bg: rgba(127, 191, 143, 0.12);
+
+    color-scheme: dark;
+  }
+
+  :root[data-theme="light"] {
+    --bg: #f7f5f1;
+    --panel: #ffffff;
+    --panel-2: #f1eee8;
+    --border: #e2ddd3;
+    --border-soft: #ece8e0;
+    --text: #262320;
+    --text-dim: #6b6559;
+    --text-faint: #a39c8d;
+    --accent: #c85a2a;
+    --accent-dim: #a8461e;
+    --accent-glow: rgba(200, 90, 42, 0.10);
+
+    --el-H: #4a4640;
+    --el-H-bg: rgba(74, 70, 64, 0.08);
+    --el-C: #57534a;
+    --el-C-bg: rgba(87, 83, 74, 0.10);
+    --el-N: #2f5fc4;
+    --el-N-bg: rgba(47, 95, 196, 0.10);
+    --el-S: #92790f;
+    --el-S-bg: rgba(146, 121, 15, 0.12);
+    --el-fO2: #b8382c;
+    --el-fO2-bg: rgba(184, 56, 44, 0.10);
+
+    --gapfill: #2f7d47;
+    --gapfill-bg: rgba(47, 125, 71, 0.10);
+
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f7f5f1;
+      --panel: #ffffff;
+      --panel-2: #f1eee8;
+      --border: #e2ddd3;
+      --border-soft: #ece8e0;
+      --text: #262320;
+      --text-dim: #6b6559;
+      --text-faint: #a39c8d;
+      --accent: #c85a2a;
+      --accent-dim: #a8461e;
+      --accent-glow: rgba(200, 90, 42, 0.10);
+
+      --el-H: #4a4640;
+      --el-H-bg: rgba(74, 70, 64, 0.08);
+      --el-C: #57534a;
+      --el-C-bg: rgba(87, 83, 74, 0.10);
+      --el-N: #2f5fc4;
+      --el-N-bg: rgba(47, 95, 196, 0.10);
+      --el-S: #92790f;
+      --el-S-bg: rgba(146, 121, 15, 0.12);
+      --el-fO2: #b8382c;
+      --el-fO2-bg: rgba(184, 56, 44, 0.10);
+
+      --gapfill: #2f7d47;
+      --gapfill-bg: rgba(47, 125, 71, 0.10);
+
+      color-scheme: light;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--accent-glow); }
+
+  .mono {
+    font-family: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  a { color: inherit; }
+
+  .page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 40px 28px 80px;
+  }
+
+  header.top {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+  .eyebrow {
+    font-size: 11.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  h1 {
+    margin: 2px 0 0;
+    font-size: 27px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .subline {
+    color: var(--text-dim);
+    font-size: 14px;
+    margin-top: 2px;
+  }
+  .subline .mono { color: var(--text-dim); }
+
+  /* summary tiles */
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 30px;
+  }
+  .tile {
+    background: var(--panel);
+    padding: 16px 18px;
+  }
+  .tile .num {
+    font-size: 26px;
+    font-weight: 650;
+    font-family: ui-monospace, "SF Mono", "Cascadia Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .tile .label {
+    font-size: 11.5px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 4px;
+  }
+  .tile.accent .num { color: var(--accent); }
+
+  /* machine load strip */
+  .machines {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 30px;
+  }
+  .machine-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 12.5px;
+  }
+  .machine-chip .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .machine-chip.gapfill .dot { background: var(--gapfill); box-shadow: 0 0 0 3px var(--gapfill-bg); }
+  .machine-chip b { font-weight: 600; }
+  .machine-chip .cnt {
+    font-family: ui-monospace, monospace;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  section.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--panel-2);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+  section.legend .lgroup { display: flex; align-items: center; gap: 6px; }
+  section.legend .swatch {
+    width: 10px; height: 10px; border-radius: 3px; flex: none;
+  }
+
+  /* controls */
+  .controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .controls input[type="search"] {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 7px;
+    padding: 8px 12px;
+    font-size: 13.5px;
+    flex: 1;
+    min-width: 200px;
+    outline: none;
+  }
+  .controls input[type="search"]:focus { border-color: var(--accent-dim); }
+  .controls select {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 7px;
+    padding: 8px 10px;
+    font-size: 13.5px;
+    outline: none;
+  }
+  .controls .count {
+    font-size: 12.5px;
+    color: var(--text-faint);
+    margin-left: auto;
+    font-family: ui-monospace, monospace;
+    white-space: nowrap;
+  }
+
+  /* table */
+  .table-wrap {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: auto;
+    background: var(--panel);
+  }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  thead th {
+    position: sticky; top: 0;
+    background: var(--panel-2);
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  thead th:hover { color: var(--text); }
+  thead th.sorted { color: var(--accent); }
+  thead th .arrow { font-size: 9px; margin-left: 3px; opacity: 0.7; }
+  tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--panel-2); }
+  tbody tr.hidden { display: none; }
+
+  td.case { font-family: ui-monospace, monospace; color: var(--text-dim); font-size: 12.5px; }
+  td.machine-cell { font-family: ui-monospace, monospace; font-size: 12.5px; }
+  .batch-tag {
+    display: inline-block;
+    font-family: ui-monospace, monospace;
+    font-size: 11.5px;
+    padding: 2px 6px;
+    border-radius: 5px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+  .batch-tag.gapfill { background: var(--gapfill-bg); color: var(--gapfill); border-color: transparent; }
+
+  td.runtime { font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  .runtime-cell { display: flex; align-items: center; gap: 8px; }
+  .runtime-bar {
+    height: 5px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+    flex: none;
+  }
+  .runtime-track { width: 64px; height: 5px; border-radius: 3px; background: var(--border-soft); flex: none; position: relative; }
+  .runtime-track .fill { position: absolute; inset: 0; border-radius: 3px; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); }
+
+  .chips { display: flex; gap: 4px; }
+  .chip {
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 5px;
+    border-radius: 5px;
+    line-height: 1.5;
+    cursor: default;
+  }
+  .chip.H { color: var(--el-H); background: var(--el-H-bg); }
+  .chip.C { color: var(--el-C); background: var(--el-C-bg); }
+  .chip.N { color: var(--el-N); background: var(--el-N-bg); }
+  .chip.S { color: var(--el-S); background: var(--el-S-bg); }
+  .chip.fO2 { color: var(--el-fO2); background: var(--el-fO2-bg); }
+
+  footer.notes {
+    margin-top: 26px;
+    font-size: 12.5px;
+    color: var(--text-faint);
+    line-height: 1.6;
+    border-top: 1px solid var(--border);
+    padding-top: 18px;
+  }
+  footer.notes code { font-family: ui-monospace, monospace; color: var(--text-dim); }
+  footer.notes p { margin: 0 0 8px; }
+
+  @media (max-width: 640px) {
+    .page { padding: 24px 14px 60px; }
+    h1 { font-size: 22px; }
+    table { font-size: 12px; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="top">
+    <div class="eyebrow">K2-18 b molten gas dwarf project · grid sweep</div>
+    <h1>Live simulation status</h1>
+    <div class="subline">
+      Point-in-time snapshot from a direct SSH process query (<code class="mono">ps -eo etime</code>) against every cluster machine — as of
+      <span class="mono" id="asof">__AS_OF__</span>. Not the harvest log's summary (which reflects the last daily pass) — this is live.
+    </div>
+  </header>
+
+  <div class="tiles">
+    <div class="tile accent">
+      <div class="num" id="tile-total">—</div>
+      <div class="label">Running now</div>
+    </div>
+    <div class="tile">
+      <div class="num" id="tile-machines">—</div>
+      <div class="label">Machines active</div>
+    </div>
+    <div class="tile">
+      <div class="num" id="tile-batches">—</div>
+      <div class="label">Main-grid batches</div>
+    </div>
+    <div class="tile">
+      <div class="num" id="tile-gapfill">—</div>
+      <div class="label">Gapfill reruns</div>
+    </div>
+    <div class="tile">
+      <div class="num mono" id="tile-longest">—</div>
+      <div class="label">Longest running</div>
+    </div>
+  </div>
+
+  <div class="machines" id="machines"></div>
+
+  <section class="legend">
+    <span style="color:var(--text-faint)">Grid axis key:</span>
+    <span class="lgroup"><span class="swatch" style="background:var(--el-H)"></span>H — hydrogen budget (ppmw)</span>
+    <span class="lgroup"><span class="swatch" style="background:var(--el-C)"></span>C — carbon (C/H mass ratio)</span>
+    <span class="lgroup"><span class="swatch" style="background:var(--el-N)"></span>N — nitrogen (N/H mass ratio)</span>
+    <span class="lgroup"><span class="swatch" style="background:var(--el-S)"></span>S — sulphur (S/H mass ratio)</span>
+    <span class="lgroup"><span class="swatch" style="background:var(--el-fO2)"></span>fO2 — mantle oxygen fugacity (ΔIW)</span>
+    <span class="lgroup"><span class="swatch" style="background:var(--gapfill)"></span>gapfill — recovered single-point rerun</span>
+  </section>
+
+  <div class="controls">
+    <input type="search" id="filter" placeholder="Filter by case, batch, machine, or grid tag (e.g. H3_C2, cap003a, batch08)…" />
+    <select id="group-filter">
+      <option value="all">All groups</option>
+      <option value="main">Main grid only</option>
+      <option value="gapfill">Gapfill reruns only</option>
+    </select>
+    <span class="count" id="count-label"></span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th data-key="batch">Batch <span class="arrow"></span></th>
+          <th data-key="machine">Machine <span class="arrow"></span></th>
+          <th data-key="case">Case <span class="arrow"></span></th>
+          <th data-key="etimes">Runtime <span class="arrow"></span></th>
+          <th data-key="grid">Grid position</th>
+          <th data-key="H">H (ppmw)</th>
+          <th data-key="C">C (C/H)</th>
+          <th data-key="N">N (N/H)</th>
+          <th data-key="S">S (S/H)</th>
+          <th data-key="fO2">fO2 (ΔIW)</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <footer class="notes">
+    <p>Liveness is a real <code>ps</code>/SSH query against each of the 14 IoA cluster machines, not a log-mtime guess — the same
+    approach <code>scripts/harvest_completed_cases.py</code> uses for its own "still running" classification, run fresh for this report
+    rather than reused from this morning's cron pass. Grid indices are decoded by exact-within-tolerance match against
+    <code>grid_sweep_configs/full_parameter_sweep.toml</code>'s axis value lists (same convention as
+    <code>simulation_data/GRID_INDEX_LEGEND.txt</code>), read directly from each running case's own launch config
+    (<code>cfgs/case_NNNNNN.toml</code>), not recomputed from case numbering.</p>
+    <p>Gapfill rows are single-point recovery runs launched by <code>scripts/generate_gapfill_configs.py</code> for grid points killed
+    mid-run by an earlier cluster reset — their directory name already encodes the grid position directly, so no batch/case-number
+    lookup was needed for those.</p>
+    <p id="idle-note"></p>
+  </footer>
+
+</div>
+
+<script>
+const ROWS = __ROWS_JSON__;
+const ALL_BATCHES = __ALL_BATCHES_JSON__;
+
+function parseEtime(s) {
+  // formats: "D-HH:MM:SS" or "HH:MM:SS" or "MM:SS"
+  let days = 0, rest = s;
+  if (s.includes('-')) { [days, rest] = s.split('-'); days = parseInt(days, 10); }
+  const parts = rest.split(':').map(Number);
+  let h = 0, m = 0, sec = 0;
+  if (parts.length === 3) [h, m, sec] = parts;
+  else if (parts.length === 2) [m, sec] = parts;
+  return { days, h, m, sec };
+}
+function fmtRuntime(etimes) {
+  const d = Math.floor(etimes / 86400);
+  const h = Math.floor((etimes % 86400) / 3600);
+  const m = Math.floor((etimes % 3600) / 60);
+  if (d > 0) return `${d}d ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m`;
+  if (h > 0) return `${h}h ${String(m).padStart(2,'0')}m`;
+  return `${m}m`;
+}
+function fmtNum(v) {
+  if (v >= 1000) return v.toLocaleString('en-US', {maximumFractionDigits: 0});
+  if (v < 0.01) return v.toString();
+  return v.toString();
+}
+
+const maxEtimes = Math.max(...ROWS.map(r => r.etimes));
+
+// summary tiles
+const mainRows = ROWS.filter(r => r.group === 'main');
+const gapRows = ROWS.filter(r => r.group === 'gapfill');
+const machines = [...new Set(ROWS.map(r => r.machine))];
+const batches = [...new Set(mainRows.map(r => r.batch))];
+
+document.getElementById('tile-total').textContent = ROWS.length;
+document.getElementById('tile-machines').textContent = machines.length;
+document.getElementById('tile-batches').textContent = batches.length;
+document.getElementById('tile-gapfill').textContent = gapRows.length;
+const longest = ROWS.reduce((a,b) => a.etimes > b.etimes ? a : b);
+document.getElementById('tile-longest').textContent = fmtRuntime(longest.etimes);
+
+// batches defined in grid_sweep_configs/batch_configs/ with zero live cases
+// right now -- could mean not yet launched, fully finished/harvested, or
+// fully crashed; this page doesn't distinguish those, just flags "nothing
+// running there at this instant" (cross-check the harvest log for outcome).
+const idleBatches = ALL_BATCHES.filter(b => !batches.includes(b));
+const idleNoteEl = document.getElementById('idle-note');
+idleNoteEl.textContent = idleBatches.length
+  ? `No running cases right now in: ${idleBatches.join(', ')} (not yet launched, fully finished, or fully crashed -- see the harvest log for which).`
+  : 'Every defined batch has at least one case running right now.';
+
+// machine chips (sorted alphabetically -- no fixed machine list, since which
+// machines are active changes batch to batch)
+const machinesEl = document.getElementById('machines');
+[...machines].sort().forEach(m => {
+  const rowsFor = ROWS.filter(r => r.machine === m);
+  const isGap = rowsFor[0].group === 'gapfill';
+  const batchLabel = isGap ? 'gapfill recovery' : rowsFor[0].batch;
+  const div = document.createElement('div');
+  div.className = 'machine-chip' + (isGap ? ' gapfill' : '');
+  div.innerHTML = `<span class="dot"></span><b>${m}</b><span>${batchLabel}</span><span class="cnt">${rowsFor.length} running</span>`;
+  machinesEl.appendChild(div);
+});
+
+function chip(axis, idx) {
+  return `<span class="chip ${axis}" title="index ${idx}">${axis}${idx}</span>`;
+}
+
+let sortKey = 'etimes';
+let sortDir = -1;
+let groupFilter = 'all';
+let searchText = '';
+
+// Matches a single grid-axis token like "h2", "c0", "fo23" (letter-code
+// h/c/n/s/fo2 followed by exactly one digit 0-3), or the bare letter-code
+// alone ("fo2", "h") with no digit -- see below for why the bare form has
+// to be legal too.
+const AXIS_TOKEN_RE = /^(h|c|n|s|fo2)(\d)?$/;
+const AXIS_KEY = { h: 'hi', c: 'ci', n: 'ni', s: 'si', fo2: 'foi' };
+
+// Deliberately NOT a single mashed-together haystack string: "batch03"
+// naturally contains the substring "h0" (...batc-H-0-3), so a naive
+// haystack.includes("h0") search for H-axis index 0 also false-matched
+// every batch whose number starts with 0 (batch03/04/06/07/08), and "h1"
+// likewise false-matched batch12. Recognizing axis-tag queries explicitly
+// and comparing them against the row's real indices (rather than
+// substring-searching row labels for characters that happen to spell out
+// an axis tag) avoids that entirely, and as a side effect makes compound
+// queries like "H3_C2" (AND across axes) actually work, matching the
+// filter box's own placeholder text.
+function matchesQuery(r, qRaw) {
+  if (!qRaw) return true;
+  const q = qRaw.trim().toLowerCase();
+  const parts = q.split(/[^a-z0-9]+/).filter(Boolean);
+  if (parts.length && parts.every(p => AXIS_TOKEN_RE.test(p))) {
+    return parts.every(p => {
+      const m = p.match(AXIS_TOKEN_RE);
+      // Bare axis name with no digit (e.g. just "fo2"): every row has an
+      // fO2 value, so there's no meaningful index to filter on -- treat it
+      // as "this axis exists" rather than silently matching zero rows
+      // (which is what a bare axis name used to do, since it fails the
+      // digit-suffixed regex and then the id-only substring fallback below
+      // has nothing to match it against either).
+      if (m[2] === undefined) return true;
+      return String(r[AXIS_KEY[m[1]]]) === m[2];
+    });
+  }
+  const idHay = `${r.batch} ${r.machine} ${r.case}`.toLowerCase();
+  return idHay.includes(q);
+}
+
+function render() {
+  const tbody = document.getElementById('tbody');
+  let filtered = ROWS.filter(r => {
+    if (groupFilter !== 'all' && r.group !== groupFilter) return false;
+    return matchesQuery(r, searchText);
+  });
+
+  filtered.sort((a, b) => {
+    let av = a[sortKey], bv = b[sortKey];
+    if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
+    if (av < bv) return -1 * sortDir;
+    if (av > bv) return 1 * sortDir;
+    return 0;
+  });
+
+  document.getElementById('count-label').textContent = `${filtered.length} / ${ROWS.length} shown`;
+
+  tbody.innerHTML = filtered.map(r => {
+    const pct = Math.max(4, Math.round(100 * r.etimes / maxEtimes));
+    const batchTagClass = r.group === 'gapfill' ? 'batch-tag gapfill' : 'batch-tag';
+    return `<tr>
+      <td><span class="${batchTagClass}">${r.batch}</span></td>
+      <td class="machine-cell">${r.machine}</td>
+      <td class="case">${r.case}</td>
+      <td class="runtime">
+        <div class="runtime-cell">
+          <span>${fmtRuntime(r.etimes)}</span>
+          <span class="runtime-track"><span class="fill" style="width:${pct}%"></span></span>
+        </div>
+      </td>
+      <td><div class="chips">${chip('H', r.hi)}${chip('C', r.ci)}${chip('N', r.ni)}${chip('S', r.si)}${chip('fO2', r.foi)}</div></td>
+      <td class="mono">${fmtNum(r.H)}</td>
+      <td class="mono">${fmtNum(r.C)}</td>
+      <td class="mono">${fmtNum(r.N)}</td>
+      <td class="mono">${fmtNum(r.S)}</td>
+      <td class="mono">${r.fO2.toFixed(1)}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.querySelectorAll('thead th[data-key]').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    if (key === 'grid') return;
+    if (sortKey === key) sortDir *= -1;
+    else { sortKey = key; sortDir = key === 'etimes' ? -1 : 1; }
+    document.querySelectorAll('thead th').forEach(t => { t.classList.remove('sorted'); t.querySelector('.arrow').textContent = ''; });
+    th.classList.add('sorted');
+    th.querySelector('.arrow').textContent = sortDir === 1 ? '▲' : '▼';
+    render();
+  });
+});
+
+document.getElementById('filter').addEventListener('input', e => {
+  searchText = e.target.value.toLowerCase();
+  render();
+});
+document.getElementById('group-filter').addEventListener('change', e => {
+  groupFilter = e.target.value;
+  render();
+});
+
+render();
+</script>

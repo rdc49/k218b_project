@@ -1,0 +1,3 @@
+machine,launch_script_path,session_name
+cap003b,/data/rdc49-2/K218b_project/grid_sweep_configs/vulcan_rerun_configs/pilot_20260730/cap003b/launch_cap003b.sh,vulcan_rerun_cap003b
+cap003c,/data/rdc49-2/K218b_project/grid_sweep_configs/vulcan_rerun_configs/pilot_20260730/cap003c/launch_cap003c.sh,vulcan_rerun_cap003c

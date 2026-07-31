@@ -1,0 +1,191 @@
+Atmodeller initialized with double precision (float64)
+[[93m[1m WARNING [21m[0m] The archive tar file does not exist: /data/rdc49-2/K218b_project/simulation_data/grid_H1_C2_N3_S2_fO22__from_batch10_case_000046__7_crash_atmos_chem_step_vulcan_chem_funs_race_syntax_error/data/data.tar
+[[32m[1m INFO  [21m[0m] Running atmospheric chemistry...
+[[32m[1m INFO  [21m[0m]     Using vulcan module, offline
+[[32m[1m INFO  [21m[0m] Elements conserved in the network.
+[[32m[1m INFO  [21m[0m] No duplicates in the network.
+[[32m[1m INFO  [21m[0m] Elements conserved in the network.
+[[32m[1m INFO  [21m[0m] No duplicates in the network.
+[[32m[1m INFO  [21m[0m] Running VULCAN
+[[32m[1m INFO  [21m[0m] Initializing with compositions from ASCII file /data/rdc49-2/K218b_project/simulation_data/grid_H1_C2_N3_S2_fO22__from_batch10_case_000046__7_crash_atmos_chem_step_vulcan_chem_funs_race_syntax_error/offchem/vmrs.dat
+[[32m[1m INFO  [21m[0m] Input stellar spectrum from 2.0 to 700.0
+[[32m[1m INFO  [21m[0m] Using wavelength bins from 2.0 to 655.5
+[[32m[1m INFO  [21m[0m] Include molecular diffusion.
+[[32m[1m INFO  [21m[0m] Starting VULCAN integration with 1 threads...
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[93m[1m WARNING [21m[0m] Keep producing negative values! Clipping negative solutions and moving on!
+[[32m[1m INFO  [21m[0m] Elapsed time: 5.27e-06 || Step number: 100/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 1.33e-07
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 2.66e-05 || Step number: 200/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 3.60e-07
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 1.19e-04 || Step number: 300/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 1.73e-06
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 5.50e-04 || Step number: 400/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 7.61e-06
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 2.46e-03 || Step number: 500/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 2.87e-05
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 1.07e-02 || Step number: 600/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 1.41e-04
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 4.04e-02 || Step number: 700/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 4.24e-04
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 1.39e-01 || Step number: 800/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 1.32e-03
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 4.28e-01 || Step number: 900/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 4.77e-03
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 1.10e+00 || Step number: 1000/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 1.77e-02
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 2.78e+00 || Step number: 1100/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 3.20e-02
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 6.03e+00 || Step number: 1200/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 6.14e-02
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 1.18e+01 || Step number: 1300/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 1.02e-01
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 2.24e+01 || Step number: 1400/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 1.95e-01
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 4.23e+01 || Step number: 1500/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 3.32e-01
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 7.63e+01 || Step number: 1600/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.00e+00      || longdy/dt = 1.00e+00  || dt = 5.37e-01
+[[32m[1m INFO  [21m[0m] from nz = 0 and OH
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 1.35e+02 || Step number: 1700/30000
+[[32m[1m INFO  [21m[0m] longdy = 4.18e+00      || longdy/dt = 7.23e-02  || dt = 9.60e-01
+[[32m[1m INFO  [21m[0m] from nz = 20 and S4
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 2.40e+02 || Step number: 1800/30000
+[[32m[1m INFO  [21m[0m] longdy = 6.80e+00      || longdy/dt = 6.56e-02  || dt = 1.66e+00
+[[32m[1m INFO  [21m[0m] from nz = 20 and S4
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 4.31e+02 || Step number: 1900/30000
+[[32m[1m INFO  [21m[0m] longdy = 6.37e+00      || longdy/dt = 3.38e-02  || dt = 2.74e+00
+[[32m[1m INFO  [21m[0m] from nz = 33 and HCS
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 9.05e+02 || Step number: 2000/30000
+[[32m[1m INFO  [21m[0m] longdy = 8.42e+00      || longdy/dt = 1.88e-02  || dt = 8.24e+00
+[[32m[1m INFO  [21m[0m] from nz = 29 and HCS
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 2.15e+03 || Step number: 2100/30000
+[[32m[1m INFO  [21m[0m] longdy = 2.93e+04      || longdy/dt = 2.74e+01  || dt = 1.94e+01
+[[32m[1m INFO  [21m[0m] from nz = 27 and CS
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 4.91e+03 || Step number: 2200/30000
+[[32m[1m INFO  [21m[0m] longdy = 3.33e+06      || longdy/dt = 1.37e+03  || dt = 4.02e+01
+[[32m[1m INFO  [21m[0m] from nz = 30 and CS
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 1.08e+04 || Step number: 2300/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.02e+05      || longdy/dt = 1.91e+01  || dt = 1.46e+02
+[[32m[1m INFO  [21m[0m] from nz = 34 and CS
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 3.06e+04 || Step number: 2400/30000
+[[32m[1m INFO  [21m[0m] longdy = 4.44e+01      || longdy/dt = 2.97e-03  || dt = 6.20e+02
+[[32m[1m INFO  [21m[0m] from nz = 38 and CS
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 9.63e+04 || Step number: 2500/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.66e+01      || longdy/dt = 3.45e-04  || dt = 1.33e+03
+[[32m[1m INFO  [21m[0m] from nz = 37 and CH2
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 1.86e+05 || Step number: 2600/30000
+[[32m[1m INFO  [21m[0m] longdy = 3.53e+01      || longdy/dt = 4.04e-04  || dt = 5.23e+03
+[[32m[1m INFO  [21m[0m] from nz = 38 and CH2
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 2.57e+05 || Step number: 2700/30000
+[[32m[1m INFO  [21m[0m] longdy = 3.27e+00      || longdy/dt = 4.70e-05  || dt = 1.65e+03
+[[32m[1m INFO  [21m[0m] from nz = 38 and CH2
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 3.26e+05 || Step number: 2800/30000
+[[32m[1m INFO  [21m[0m] longdy = 8.86e-01      || longdy/dt = 1.32e-05  || dt = 2.56e+03
+[[32m[1m INFO  [21m[0m] from nz = 38 and CH2
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 3.76e+05 || Step number: 2900/30000
+[[32m[1m INFO  [21m[0m] longdy = 3.36e-01      || longdy/dt = 6.84e-06  || dt = 1.67e+03
+[[32m[1m INFO  [21m[0m] from nz = 44 and CS
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 4.25e+05 || Step number: 3000/30000
+[[32m[1m INFO  [21m[0m] longdy = 2.81e-01      || longdy/dt = 5.81e-06  || dt = 9.64e+02
+[[32m[1m INFO  [21m[0m] from nz = 42 and CN
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 4.89e+05 || Step number: 3100/30000
+[[32m[1m INFO  [21m[0m] longdy = 3.62e-01      || longdy/dt = 5.69e-06  || dt = 1.57e+03
+[[32m[1m INFO  [21m[0m] from nz = 25 and N2H2
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 5.59e+05 || Step number: 3200/30000
+[[32m[1m INFO  [21m[0m] longdy = 3.40e-01      || longdy/dt = 4.95e-06  || dt = 1.85e+03
+[[32m[1m INFO  [21m[0m] from nz = 23 and N2H2
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 6.75e+05 || Step number: 3300/30000
+[[32m[1m INFO  [21m[0m] longdy = 4.13e-01      || longdy/dt = 3.63e-06  || dt = 2.57e+03
+[[32m[1m INFO  [21m[0m] from nz = 23 and N2H2
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 8.13e+05 || Step number: 3400/30000
+[[32m[1m INFO  [21m[0m] longdy = 3.79e-01      || longdy/dt = 2.78e-06  || dt = 2.04e+03
+[[32m[1m INFO  [21m[0m] from nz = 26 and HCS
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 9.97e+05 || Step number: 3500/30000
+[[32m[1m INFO  [21m[0m] longdy = 2.26e-01      || longdy/dt = 1.26e-06  || dt = 7.86e+03
+[[32m[1m INFO  [21m[0m] from nz = 26 and HCS
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 1.14e+06 || Step number: 3600/30000
+[[32m[1m INFO  [21m[0m] longdy = 1.15e-01      || longdy/dt = 8.31e-07  || dt = 6.32e+03
+[[32m[1m INFO  [21m[0m] from nz = 26 and HCS
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Elapsed time: 1.40e+06 || Step number: 3700/30000
+[[32m[1m INFO  [21m[0m] longdy = 7.00e-02      || longdy/dt = 2.69e-07  || dt = 7.40e+03
+[[32m[1m INFO  [21m[0m] from nz = 26 and HCS
+[[32m[1m INFO  [21m[0m] -----------------------------------------------------------------
+[[32m[1m INFO  [21m[0m] Integration successful with 3793 steps
+[[32m[1m INFO  [21m[0m] long dy, long dydt = 0.029986772701625187, 9.274402370071645e-08
+[[32m[1m INFO  [21m[0m] Total atom loss:
+[[32m[1m INFO  [21m[0m] H: 0.01607622370020219 
+[[32m[1m INFO  [21m[0m] O: -0.040039610783734275 
+[[32m[1m INFO  [21m[0m] C: 0.12186636307753357 
+[[32m[1m INFO  [21m[0m] N: -0.013130359421488718 
+[[32m[1m INFO  [21m[0m] S: 0.7615416181804643 
+[[32m[1m INFO  [21m[0m] ------ Live long and prosper \V/ ------
+[[32m[1m INFO  [21m[0m]     done
+Atmodeller initialized with double precision (float64)
+[[93m[1m WARNING [21m[0m] The archive tar file does not exist: /data/rdc49-2/K218b_project/simulation_data/grid_H1_C2_N3_S2_fO22__from_batch10_case_000046__7_crash_atmos_chem_step_vulcan_chem_funs_race_syntax_error/data/data.tar
+[[32m[1m INFO  [21m[0m] Observing the planet...
+Loading PHOENIX star table in file '/data/rdc49-2/FWL_DATA/prt/input_data/stellar_spectra/phoenix/phoenix.startable.petitRADTRANS.h5'... Done.

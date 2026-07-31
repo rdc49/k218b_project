@@ -78,6 +78,7 @@ CATEGORY_LABELS = {
     4: '4_running_mid_loop',
     5: '5_running_past_solidified_stale_status',
     6: '6_unclassified',
+    7: '7_crash_atmos_chem_step',
 }
 
 # (signature name, required substring in exception type or None, required
@@ -91,6 +92,12 @@ KNOWN_FAILURE_SIGNATURES = [
         'consecutive AGNI failures with frozen interior state',
     ),
     ('observe_wavelength_out_of_range', 'ValueError', 'out of opacities table wavelength grid'),
+    # Shared chem_funs.py race condition (see vulcan_chem_funs_race_condition.md):
+    # many concurrent grid points regenerate/import the same non-atomically-written
+    # file, so a process can catch it mid-write. Covers 227/240 of currently-known
+    # category-7 cases; the rest get the bare category label with no signature.
+    ('vulcan_chem_funs_race_syntax_error', 'SyntaxError', "unmatched '}'"),
+    ('vulcan_chem_funs_race_missing_symjac', 'ImportError', "cannot import name 'symjac'"),
 ]
 
 LOOP_COUNTERS_RE = re.compile(
@@ -262,6 +269,22 @@ def match_known_signature(exc_type: str | None, exc_msg: str | None) -> str | No
     return None
 
 
+def classify_crash_stage(text: str, tb_pos: int) -> int:
+    """Which stage a case's (last) traceback happened in: 3 (observe/
+    spectrum step), 7 (offline VULCAN atmos_chem step), or 2 (catch-all:
+    main loop, or anything earlier). Check the latest-possible stage
+    marker first, since a case that reached the observe step necessarily
+    also passed through the atmos_chem step earlier in the same log.
+    """
+    observe_pos = text.find('Observing the planet')
+    if observe_pos != -1 and observe_pos < tb_pos:
+        return 3
+    atmos_chem_pos = text.find('Running atmospheric chemistry')
+    if atmos_chem_pos != -1 and atmos_chem_pos < tb_pos:
+        return 7
+    return 2
+
+
 def format_age(seconds: float) -> str:
     if seconds < 3600:
         return f'{seconds / 60:.0f} min'
@@ -274,7 +297,7 @@ def status_disagreement(status: tuple[str, str] | None, category: int) -> str | 
     if status is None:
         return None
     _, status_str = status
-    if 'Running' in status_str and category in (1, 2, 3, 6):
+    if 'Running' in status_str and category in (1, 2, 3, 6, 7):
         return (
             f'on-disk status says "Running" but real outcome is '
             f'{CATEGORY_LABELS[category]} -- stale/misleading status file'
@@ -310,11 +333,12 @@ def analyze_case(
         exc_type, exc_msg = extract_exception(text, tb_pos)
         loop_at_crash = extract_last_loop(text, before_pos=tb_pos)
         loop_str = f'loop {loop_at_crash}' if loop_at_crash is not None else 'before loop 1'
-        observe_pos = text.find('Observing the planet')
-        category = 3 if (observe_pos != -1 and observe_pos < tb_pos) else 2
+        category = classify_crash_stage(text, tb_pos)
         sig = match_known_signature(exc_type, exc_msg)
         exc_label = sig or exc_type or 'unrecognized exception'
-        stage = 'observe/spectrum step' if category == 3 else 'main loop'
+        stage = {3: 'observe/spectrum step', 7: 'atmos_chem (VULCAN) step'}.get(
+            category, 'main loop'
+        )
         outcome = f'crashed in {stage} ({exc_label}) @ {loop_str}'
         return CaseResult(
             case_dir.name,
@@ -514,7 +538,7 @@ def build_param_breakdown(
 def build_failure_mode_summary(results: dict[str, CaseResult]) -> str:
     tally: dict[str, list[str]] = {}
     for name, r in results.items():
-        if r.category in (2, 3):
+        if r.category in (2, 3, 7):
             key = r.exc_signature or 'unrecognized exception'
             tally.setdefault(key, []).append(name)
     if not tally:
